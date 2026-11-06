@@ -1,0 +1,31 @@
+# 构建产物
+bin/
+obj/
+publish/
+.vs/
+.idea/
+*.user
+*.suo
+
+# 运行时配置与账户数据（按文件名忽略，不写裸 config/，避免误伤 src/LPML.Core/Config/）
+launcher.json
+instances.json
+folders.json
+javas.json
+library-index.json
+accounts.json
+running-game.json
+*.log
+
+# 运行时数据目录（锚定到程序目录下的 LPML 数据目录）
+/LPML/config/
+/LPML/cache/
+/LPML/logs/
+/LPML/accounts/
+/LPML/backgrounds/
+/.minecraft/
+
+# 工具缓存与打包产物
+__pycache__/
+*.py[cod]
+*.zip

@@ -1,0 +1,166 @@
+<UserControl x:Class="LPML.App.Views.AccountsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{DynamicResource Font.Ui}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,20,28,28">
+            <TextBlock Text="{DynamicResource String.Account.Title}" Style="{StaticResource Text.Title}"/>
+            <TextBlock Text="{DynamicResource String.Account.Subtitle}" Style="{StaticResource Text.Subtitle}" Margin="0,4,0,18"/>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" x:Name="StorageText" Text="" Style="{StaticResource Text.Caption}"
+                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.ImportCustom}" Padding="14,7" Click="ImportCustom_OnClick"/>
+                        <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.OpenPortable}" Margin="10,0,0,0" Padding="14,7"
+                                Click="OpenStorageDir_OnClick"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ListBox x:Name="AccountList" Grid.Column="0" SelectionChanged="AccountList_OnSelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="17" Background="{DynamicResource Brush.AccentSoft}">
+                                        <TextBlock Text="👤" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName, Mode=OneWay}" FontWeight="SemiBold" FontSize="13.5"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding TypeName, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource Brush.ForegroundSecondary}"/>
+                                            <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                                            <TextBlock Text="{Binding StorageDisplayName, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Uuid}" FontSize="10" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0" Width="170">
+                        <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.RefreshToken}" Padding="16,9" Click="RefreshToken_OnClick"/>
+                        <TextBlock Text="{DynamicResource String.Account.StorageLabel}" Style="{StaticResource Text.Caption}" Margin="0,14,0,4"/>
+                        <ComboBox x:Name="MoveStorageCombo" SelectedIndex="0">
+                            <ComboBoxItem Content="{DynamicResource String.Account.StoragePortable}"/>
+                            <ComboBoxItem Content="{DynamicResource String.Account.StorageUserProfile}"/>
+                            <ComboBoxItem Content="{DynamicResource String.Account.StorageCustom}"/>
+                        </ComboBox>
+                        <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.MoveHere}" Margin="0,8,0,0" Padding="16,9" Click="MoveAccount_OnClick"/>
+                        <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.Delete}" Margin="0,8,0,0" Padding="16,9" Click="Remove_OnClick"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <TabControl x:Name="AccountTabs">
+                <!-- 微软 -->
+                <TabItem Header="{DynamicResource String.Account.TabMicrosoft}">
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource String.Account.MsTitle}" FontWeight="SemiBold" FontSize="15"/>
+                            <TextBlock Text="{DynamicResource String.Account.MsHint}"
+                                       Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                            <TextBlock Text="Microsoft Client ID" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                            <TextBox x:Name="ClientIdBox" LostFocus="ClientIdBox_OnLostFocus"/>
+                            <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.MsStart}" Margin="0,14,0,0" Padding="22,10"
+                                    HorizontalAlignment="Left" Click="MicrosoftLogin_OnClick"/>
+                            <Border Margin="0,14,0,0" Padding="14" Background="{DynamicResource Brush.Card}"
+                                    CornerRadius="{DynamicResource Radius.Small}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                    x:Name="CodePanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock x:Name="CodeHint" Text="" TextWrapping="Wrap" FontSize="12.5"/>
+                                    <TextBlock x:Name="UserCodeText" Text="" FontSize="28" FontWeight="Bold" Margin="0,10,0,0"
+                                               Foreground="{DynamicResource Brush.Accent}" HorizontalAlignment="Center"/>
+                                    <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.OpenVerifyPage}" Margin="0,12,0,0" Padding="18,8"
+                                            HorizontalAlignment="Center" Click="OpenVerify_OnClick"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock x:Name="MicrosoftStatus" Text="" Style="{StaticResource Text.Caption}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+
+                <!-- 离线 -->
+                <TabItem Header="{DynamicResource String.Account.TabOffline}">
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource String.Account.OfflineTitle}" FontWeight="SemiBold" FontSize="15"/>
+                            <TextBlock Text="{DynamicResource String.Account.OfflineHint}"
+                                       Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                            <TextBlock Text="{DynamicResource String.Account.PlayerName}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                            <TextBox x:Name="OfflineNameBox" Width="260" HorizontalAlignment="Left"/>
+
+                            <TextBlock Text="{DynamicResource String.Account.OfflineUuid}" Style="{StaticResource Text.Caption}" Margin="0,16,0,6"/>
+                            <TextBox x:Name="OfflineUuidBox" Width="330" HorizontalAlignment="Left"
+                                     TextChanged="OfflineUuid_OnTextChanged"/>
+                            <TextBlock x:Name="OfflineUuidHint" Text="" Style="{StaticResource Text.Caption}"
+                                       TextWrapping="Wrap" Margin="0,6,0,0" FontSize="10.5"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.UuidRandom}" Padding="14,6" Click="RandomUuid_OnClick"/>
+                                <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.UuidReset}" Margin="8,0,0,0" Padding="14,6" Click="ResetUuid_OnClick"/>
+                            </StackPanel>
+
+                            <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.AddOffline}" Margin="0,16,0,0" Padding="22,10"
+                                    HorizontalAlignment="Left" Click="AddOffline_OnClick"/>
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+
+                <!-- 外置 -->
+                <TabItem Header="{DynamicResource String.Account.TabYggdrasil}">
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource String.Account.YggTitle}" FontWeight="SemiBold" FontSize="15"/>
+                            <TextBlock Text="{DynamicResource String.Account.YggHint}"
+                                       Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                            <TextBlock Text="{DynamicResource String.Account.ServerAddress}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                            <TextBox x:Name="AuthServerBox"/>
+                            <TextBlock Text="{DynamicResource String.Account.EmailOrUser}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                            <TextBox x:Name="AuthUserBox"/>
+                            <TextBlock Text="{DynamicResource String.Account.Password}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                            <PasswordBox x:Name="AuthPasswordBox"/>
+                            <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.Login}" Margin="0,14,0,0" Padding="22,10"
+                                    HorizontalAlignment="Left" Click="YggdrasilLogin_OnClick"/>
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+
+                <!-- LittleSkin -->
+                <TabItem Header="LittleSkin">
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource String.Account.LittleSkinTitle}" FontWeight="SemiBold" FontSize="15"/>
+                            <TextBlock Text="{DynamicResource String.Account.LittleSkinHint}"
+                                       Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                            <TextBlock Text="{DynamicResource String.Account.Server}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                            <TextBox x:Name="LittleSkinServerBox" IsReadOnly="True"/>
+                            <TextBlock Text="{DynamicResource String.Account.EmailOrUser2}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                            <TextBox x:Name="LittleSkinUserBox"/>
+                            <TextBlock Text="{DynamicResource String.Account.Password2}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                            <PasswordBox x:Name="LittleSkinPasswordBox"/>
+                            <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.LoginLittleSkin}" Margin="0,14,0,0" Padding="22,10"
+                                    HorizontalAlignment="Left" Click="LittleSkinLogin_OnClick"/>
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+            </TabControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

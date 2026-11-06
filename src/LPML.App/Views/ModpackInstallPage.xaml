@@ -1,0 +1,76 @@
+<UserControl x:Class="LPML.App.Views.ModpackInstallPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,22,28,28">
+        <StackPanel>
+
+            <!-- 整合包概览 -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="PackTitle" Text="—" FontWeight="SemiBold" FontSize="19"/>
+                    <TextBlock x:Name="PackMeta" Text="—" Style="{StaticResource Text.Caption}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 保存名称 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.Install.SaveName}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource String.Modpack.NameHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <TextBox x:Name="NameBox" Style="{StaticResource TextBox.Glass}" TextChanged="NameBox_OnTextChanged"/>
+                    <TextBlock x:Name="NameWarning" Text="" Style="{StaticResource Text.Caption}" Foreground="OrangeRed"
+                               Margin="0,8,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 版本 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.Modpack.Version}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource String.Modpack.VersionHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                    <!-- 先选 MC 版本 -->
+                    <TextBlock Text="{DynamicResource String.Modpack.GameVersion}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="GameVersionCombo" SelectionChanged="GameVersionCombo_OnSelectionChanged"
+                              Margin="0,0,0,14"/>
+
+                    <!-- 再选该 MC 版本下的整合包版本 -->
+                    <TextBlock Text="{DynamicResource String.Modpack.PackVersion}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                    <ListBox x:Name="VersionList" Height="180" SelectionChanged="VersionList_OnSelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,2">
+                                    <TextBlock Text="{Binding Name, Mode=OneWay}" FontSize="13" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding PublishedText, Mode=OneWay}" Style="{DynamicResource Text.Caption}" FontSize="11"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+            <!-- 加载器（只能选作者提供的） -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.Download.Loader}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource String.Modpack.LoaderHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <ComboBox x:Name="LoaderCombo"/>
+                    <TextBlock x:Name="LoaderHintText" Text="" Style="{StaticResource Text.Caption}"
+                               Margin="0,8,0,0" TextWrapping="Wrap" FontSize="10.5"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 确定 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <Button x:Name="ConfirmButton" Style="{StaticResource Button.Primary}" Padding="28,11" FontSize="14"
+                            HorizontalAlignment="Left" Content="{DynamicResource String.Msg.Common.Confirm}" Click="Confirm_OnClick"/>
+                    <TextBlock x:Name="StatusText" Text="" Style="{StaticResource Text.Caption}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

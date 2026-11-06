@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 自定义入口：区分 GUI 与命令行模式。App.xaml 改作普通 Page 编译。 -->
+    <StartupObject>LPML.App.Program</StartupObject>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>LPML.App</RootNamespace>
+    <AssemblyName>LPML</AssemblyName>
+    <Company>LPML</Company>
+    <Product>LPML Launcher</Product>
+    <Version>1.0.0</Version>
+    <ApplicationIcon>Assets\lpml.ico</ApplicationIcon>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;CS8622;CS0168;CS0169;CS1998;CS0414;CS0067</NoWarn>
+    <EnableDefaultPageItems>true</EnableDefaultPageItems>
+    <SatelliteResourceLanguages>zh-Hans;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- 同时启用 UseWPF 与 UseWindowsForms 会让 Application/Color/Brush/TextBox/UserControl 等
+       在 System.Windows.* 与 System.Windows.Forms/System.Drawing 之间产生 CS0104 歧义。
+       这里移除 WinForms 的两个隐式全局 using，改由需要的文件用别名精确引用。 -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LPML.Core\LPML.Core.csproj" />
+  </ItemGroup>
+
+  <!-- 内置文档（分中英两份，按界面语言自动选择） -->
+  <ItemGroup>
+    <None Include="..\..\docs\zh-CN\**\*.md" Link="docs\zh-CN\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\docs\en-US\**\*.md" Link="docs\en-US\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 完整免责声明：协议正文与文档里都指向程序目录下的这个文件 -->
+    <None Include="..\..\DISCLAIMER.md" Link="DISCLAIMER.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- App.xaml 改作普通 Page，由 Program.Main 决定是否创建 Application（GUI / 命令行） -->
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\lpml.ico" />
+    <Resource Include="Assets\lpml.png" />
+  </ItemGroup>
+
+</Project>

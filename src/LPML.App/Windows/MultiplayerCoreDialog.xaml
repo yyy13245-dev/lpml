@@ -1,0 +1,27 @@
+<Window x:Class="LPML.App.Windows.MultiplayerCoreDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource String.Multi.Configure}" Width="520" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" 
+        FontFamily="{DynamicResource Font.Ui}">
+    <StackPanel Margin="22">
+        <TextBlock Text="{DynamicResource String.Multi.CoreTitle}" Style="{StaticResource Text.Subtitle}" Margin="0,0,0,4"/>
+        <TextBlock Text="{DynamicResource String.Multi.ConfigureHint}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+        <TextBlock Text="{DynamicResource String.Multi.PackageUrl}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+        <TextBox x:Name="UrlBox" Margin="0,0,0,14"/>
+
+        <TextBlock Text="{DynamicResource String.Multi.Checksum}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+        <TextBox x:Name="ChecksumBox" Margin="0,0,0,10"/>
+        <CheckBox x:Name="VerifyCheck" Content="{DynamicResource String.Multi.VerifyChecksum}" IsChecked="True" Margin="0,0,0,16"/>
+
+        <Border Padding="12" CornerRadius="{DynamicResource Radius.Small}" Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,0,16">
+            <TextBlock Text="{DynamicResource String.Multi.LocalOnlyNote}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap"/>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Main.Cancel}" Margin="0,0,10,0" Padding="20,9" Click="Cancel_OnClick"/>
+            <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Main.Save}" Padding="20,9" Click="Save_OnClick"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

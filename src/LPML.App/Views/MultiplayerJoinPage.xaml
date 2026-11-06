@@ -1,0 +1,49 @@
+<UserControl x:Class="LPML.App.Views.MultiplayerJoinPage"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:controls="clr-namespace:LPML.App.Controls"
+                 xmlns:local="clr-namespace:LPML.App.Views"
+                 FontFamily="{DynamicResource Font.Ui}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,20,28,28">
+            <!-- 第一步：输入邀请码 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="1" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource Brush.Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource String.Multi.EnterCode}" Style="{StaticResource Text.Subtitle}"/>
+                    </StackPanel>
+                    <TextBlock Text="{DynamicResource String.Multi.EnterCodeHint}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="220"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" x:Name="CodeBox" FontFamily="Consolas" FontSize="15" InputScope="AlphanumericFullWidth" TextChanged="CodeBox_OnTextChanged"/>
+                        <Button Grid.Column="2" Style="{StaticResource Button.Primary}" x:Name="JoinButton" Content="{DynamicResource String.Multi.JoinRoom}" Padding="22,9" Click="Join_OnClick"/>
+                    </Grid>
+                    <TextBlock x:Name="JoinStatusText" Margin="0,10,0,0" FontSize="12" Foreground="{DynamicResource Brush.ForegroundMuted}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 第二步：选择实例 + 一键进入房间 -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="2" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource Brush.Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource String.Multi.OneClickEnter}" Style="{StaticResource Text.Subtitle}"/>
+                    </StackPanel>
+                    <TextBlock Text="{DynamicResource String.Multi.OneClickHint}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                    <controls:InstancePickerControl x:Name="Picker" />
+                    <Border x:Name="JoinNotice" Margin="0,14,0,0" Padding="12" CornerRadius="{DynamicResource Radius.Small}"
+                            Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                        <TextBlock x:Name="JoinNoticeText" Style="{StaticResource Text.Caption}" TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

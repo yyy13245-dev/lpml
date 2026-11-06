@@ -1,0 +1,160 @@
+<UserControl x:Class="LPML.App.Views.DownloadPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:LPML.App.Views"
+             xmlns:controls="clr-namespace:LPML.App.Controls"
+             FontFamily="{DynamicResource Font.Ui}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,20,28,28">
+            <TextBlock Text="{DynamicResource String.Download.Title}" Style="{StaticResource Text.Title}"/>
+            <TextBlock Text="{DynamicResource String.Download.Subtitle}" Style="{StaticResource Text.Subtitle}" Margin="0,4,0,18"/>
+
+            <Grid>
+                <!-- 安装游戏 -->
+                <StackPanel x:Name="PaneInstall" Margin="0,16,0,0">
+                    <StackPanel>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource String.Download.Type}" VerticalAlignment="Center" Margin="0,0,10,0" Style="{StaticResource Text.Caption}"/>
+                                        <ComboBox x:Name="VersionTypeCombo" Width="120" SelectionChanged="VersionTypeCombo_OnSelectionChanged">
+                                            <ComboBoxItem Content="{DynamicResource String.Download.Release}" IsSelected="True"/>
+                                            <ComboBoxItem Content="{DynamicResource String.Download.Snapshot}"/>
+                                            <ComboBoxItem Content="{DynamicResource String.Download.All}"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <TextBox Grid.Column="1" x:Name="SearchBox" Margin="16,0,0,0" TextChanged="SearchBox_OnTextChanged"/>
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                        <CheckBox x:Name="IncludeAssetsCheck" Style="{StaticResource Switch}" Content="{DynamicResource String.Download.DownloadAssets}" IsChecked="True" Margin="0,0,16,0"/>
+                                        <CheckBox x:Name="CreateInstanceCheck" Style="{StaticResource Switch}" Content="{DynamicResource String.Download.CreateInstance}" IsChecked="True"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <ListBox x:Name="VersionList" Margin="0,16,0,0" Height="280" SelectionMode="Single"
+                                         SelectionChanged="VersionList_OnSelectionChanged"
+                                         MouseDoubleClick="VersionList_OnDoubleClick">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding Id}" FontWeight="SemiBold" FontSize="13.5"/>
+                                                    <TextBlock Text="{Binding ReleaseTime}" FontSize="11"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding Type}" FontSize="11" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource Brush.ForegroundSecondary}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <TextBlock x:Name="VersionStatusText" Text="{DynamicResource String.Download.LoadingVersions}"
+                                           Style="{StaticResource Text.Caption}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+
+                                <!-- 加载器：装实例时直接在这里选，不再单独开一页 -->
+                                <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,16,0,14"/>
+                                <TextBlock Text="{DynamicResource String.Download.Loader}" Style="{StaticResource Text.Caption}" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0" x:Name="LoaderKindCombo" SelectionChanged="LoaderKindCombo_OnSelectionChanged">
+                                        <ComboBoxItem Content="{DynamicResource String.Msg.Download.Vanilla}" IsSelected="True"/>
+                                        <ComboBoxItem Content="Fabric"/>
+                                        <ComboBoxItem Content="Quilt"/>
+                                        <ComboBoxItem Content="Forge"/>
+                                        <ComboBoxItem Content="NeoForge"/>
+                                        <ComboBoxItem Content="OptiFine"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Column="2" x:Name="LoaderVersionCombo"/>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource String.Download.LoaderInlineHint}" Style="{StaticResource Text.Caption}"
+                                           TextWrapping="Wrap" Margin="0,8,0,0" FontSize="10.5"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                    <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Download.InstallSelected}"
+                                            Padding="24,10" Click="InstallGame_OnClick"/>
+                                    <TextBlock Text="{DynamicResource String.Download.ClickHint}" Style="{StaticResource Text.Caption}"
+                                               VerticalAlignment="Center" Margin="14,0,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 整合包 -->
+                <StackPanel x:Name="PaneModpack" Margin="0,16,0,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource String.Download.ModpackHint}" Style="{StaticResource Text.Subtitle}"/>
+                                <Grid Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" x:Name="PackPathBox" IsReadOnly="True"/>
+                                    <Button Grid.Column="1" Style="{StaticResource Button.Base}" Content="{DynamicResource String.Download.ChooseFile}" Margin="10,0,0,0" Click="PickPack_OnClick"/>
+                                </Grid>
+                                <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Download.ImportModpack}" Margin="0,14,0,0"
+                                        HorizontalAlignment="Left" Padding="24,10" Click="ImportPack_OnClick"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 在线获取：从 Modrinth 搜整合包并直接装成新实例 -->
+                        <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource String.Download.OnlineModpack}" FontWeight="SemiBold" FontSize="15"/>
+                                <TextBlock Text="{DynamicResource String.Download.OnlineModpackHint}" Style="{StaticResource Text.Caption}"
+                                           TextWrapping="Wrap" Margin="0,4,0,14"/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" x:Name="PackSearchBox" Style="{StaticResource TextBox.Glass}"/>
+                                    <Button Grid.Column="1" Style="{StaticResource Button.Base}" Margin="10,0,0,0" Padding="20,8"
+                                            Content="{DynamicResource String.Content.Search}" Click="SearchPack_OnClick"/>
+                                </Grid>
+
+                                <ListBox x:Name="PackList" Height="240" Margin="0,14,0,0"
+                                         MouseDoubleClick="PackList_OnDoubleClick">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,2">
+                                                <TextBlock Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock Text="{Binding SummaryText, Mode=OneWay}" Style="{DynamicResource Text.Caption}"
+                                                           TextTrimming="CharacterEllipsis" FontSize="11"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <Button x:Name="InstallPackButton" Style="{StaticResource Button.Primary}" Margin="0,14,0,0"
+                                        HorizontalAlignment="Left" Padding="24,10" Content="{DynamicResource String.Download.InstallOnlinePack}"
+                                        Click="InstallOnlinePack_OnClick"/>
+                                <TextBlock x:Name="PackStatusText" Text="" Style="{StaticResource Text.Caption}"
+                                           TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

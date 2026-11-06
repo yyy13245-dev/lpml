@@ -1,0 +1,344 @@
+<UserControl x:Class="LPML.App.Views.TaskCenter"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Background="{DynamicResource Brush.Window}"
+            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1,0,0,0">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题（列表模式） -->
+            <Border Grid.Row="0" x:Name="HeaderList" Padding="18,16" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="📋" FontSize="15" Margin="0,0,10,0"/>
+                        <TextBlock Text="{DynamicResource String.Task.Title}" FontWeight="SemiBold" FontSize="15"/>
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right" Style="{StaticResource Button.Icon}" Content="✕"
+                            ToolTip="{DynamicResource String.Msg.Common.Close}" Click="Close_OnClick" Padding="8,4" FontSize="12"/>
+                </Grid>
+            </Border>
+
+            <!-- 标题（详情模式：带返回） -->
+            <Border Grid.Row="0" x:Name="HeaderDetail" Padding="18,16" Visibility="Collapsed"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource Button.Base}" Padding="8,4" Margin="0,0,12,0" Content="←" Click="Back_OnClick"/>
+                        <TextBlock x:Name="DetailTitle" Text="—" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right" Style="{StaticResource Button.Icon}" Content="✕"
+                            Click="Close_OnClick" Padding="8,4" FontSize="12"/>
+                </Grid>
+            </Border>
+
+            <!-- 任务列表 -->
+            <ListBox Grid.Row="1" x:Name="TaskList" Margin="12,12,12,0" Background="Transparent" BorderThickness="0"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.CanContentScroll="False"
+                     SelectionChanged="TaskList_OnSelectionChanged">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{DynamicResource String.Task.Retry}" Click="TaskRetry_OnClick"/>
+                        <MenuItem Header="{DynamicResource String.Task.Redownload}" Click="TaskRedownload_OnClick"/>
+                        <MenuItem Header="{DynamicResource String.Task.Cancel}" Click="TaskCancel_OnClick"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="12,10" Margin="0,0,0,6" CornerRadius="{DynamicResource Radius.Small}"
+                                Background="{DynamicResource Brush.Elevated}">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Title, Mode=OneWay}" FontSize="13" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Summary, Mode=OneWay}" FontSize="11"
+                                               Foreground="{DynamicResource Brush.ForegroundMuted}" Margin="10,0,0,0"/>
+                                </Grid>
+                                <ProgressBar Height="4" Margin="0,7,0,0" Value="{Binding Progress, Mode=OneWay}" Maximum="1"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- 单个任务详情：选项卡 = 下载 / 安装 -->
+            <TabControl Grid.Row="1" x:Name="DetailTabs" Margin="12,12,12,0" Visibility="Collapsed">
+
+                <!-- ══ 下载：先按大类汇总，点进去看逐文件进度 ══ -->
+                <TabItem Header="{DynamicResource String.Task.StageDownload}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 该任务的下载总进度（两个视图共用） -->
+                        <Grid Grid.Row="0" Margin="0,10,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" x:Name="DetailSummary" Text="—" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" x:Name="DetailPercent" Text="0%" FontSize="12"
+                                       Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                        </Grid>
+                        <ProgressBar Grid.Row="1" x:Name="DetailBar" Height="6" Value="0" Maximum="1"/>
+
+                        <!-- 第一级：两个大分类，各有独立进度条 -->
+                        <Grid Grid.Row="2" x:Name="GroupView" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" x:Name="GroupPickHint" Text="{DynamicResource String.Task.GroupPickHint}" FontSize="11"
+                                       Foreground="{DynamicResource Brush.ForegroundMuted}" Margin="0,0,0,8"/>
+                            <ListBox Grid.Row="1" x:Name="GroupList" Background="Transparent" BorderThickness="0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="False"
+                                     SelectionChanged="GroupList_OnSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="14,12" Margin="0,0,0,8" CornerRadius="{DynamicResource Radius.Card}"
+                                                Background="{DynamicResource Brush.Elevated}"
+                                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Icon, Mode=OneWay}" FontSize="17"
+                                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Title, Mode=OneWay}" FontSize="14" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding Hint, Mode=OneWay}" FontSize="10.5"
+                                                                   Foreground="{DynamicResource Brush.ForegroundMuted}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding CountText, Mode=OneWay}" FontSize="12"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}"
+                                                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                                </Grid>
+                                                <ProgressBar Height="7" Margin="0,10,0,0" Value="{Binding Progress, Mode=OneWay}" Maximum="1"/>
+                                                <Grid Margin="0,6,0,0">
+                                                    <TextBlock Text="{Binding StatusText, Mode=OneWay}" FontSize="10.5"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                                                    <TextBlock HorizontalAlignment="Right" FontSize="10.5"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}"
+                                                               Text="{DynamicResource String.Task.GroupOpen}"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <!-- 第二级：该分类下的每一个文件 -->
+                        <Grid Grid.Row="2" x:Name="ItemView" Visibility="Collapsed" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Button Grid.Row="0" Style="{StaticResource Button.Base}" HorizontalAlignment="Left"
+                                    Padding="10,4" Margin="0,0,0,8"
+                                    Content="{DynamicResource String.Task.BackToGroups}" Click="BackToGroups_OnClick"/>
+                            <Grid Grid.Row="1" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="ItemViewTitle" Text="—" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="ItemViewCount" Grid.Column="1" Text="—" FontSize="11"
+                                           Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                            </Grid>
+                            <ProgressBar Grid.Row="2" x:Name="ItemViewBar" Height="6" Value="0" Maximum="1"/>
+                            <ListBox Grid.Row="3" x:Name="ItemList" Background="Transparent" BorderThickness="0" Margin="0,10,0,0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="False"
+                                     ContextMenuOpening="ItemList_OnContextMenuOpening">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{DynamicResource String.Task.Retry}" Click="ItemRetry_OnClick"/>
+                                        <MenuItem Header="{DynamicResource String.Task.Redownload}" Click="ItemRedownload_OnClick"/>
+                                        <MenuItem Header="{DynamicResource String.Task.Cancel}" Click="ItemCancel_OnClick"/>
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="10,8" Margin="0,0,0,5" CornerRadius="{DynamicResource Radius.Small}"
+                                                Background="{DynamicResource Brush.Elevated}">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name, Mode=OneWay}" FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding StatusText, Mode=OneWay}" FontSize="10.5"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}" Margin="8,0,0,0"/>
+                                                </Grid>
+                                                <Grid Margin="0,3,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" FontSize="10"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}"
+                                                               TextTrimming="CharacterEllipsis">
+                                                        <Run Text="{Binding Group, Mode=OneWay}"/>
+                                                        <Run Text=" · "/>
+                                                        <Run Text="{Binding SpeedText, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="1" Text="{Binding ProgressText, Mode=OneWay}" FontSize="10"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}" Margin="8,0,0,0"/>
+                                                </Grid>
+                                                <ProgressBar Height="3" Margin="0,5,0,0" Value="{Binding Progress, Mode=OneWay}" Maximum="1"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+
+                <!-- ══ 安装：入口卡片 → 点进去看流程图 ══ -->
+                <TabItem Header="{DynamicResource String.Task.StageInstall}">
+                    <Grid>
+                        <!-- 入口 -->
+                        <Border x:Name="FlowEntryView" VerticalAlignment="Top" Margin="0,12,0,0"
+                                Padding="16,14" CornerRadius="{DynamicResource Radius.Card}"
+                                Background="{DynamicResource Brush.Elevated}"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                MouseLeftButtonUp="FlowEntry_OnClick" Cursor="Hand">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="🧩" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="{DynamicResource String.Task.FlowEntryTitle}"
+                                               FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" x:Name="FlowEntryCount" Text="—" FontSize="11"
+                                               Foreground="{DynamicResource Brush.ForegroundMuted}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource String.Task.FlowEntryHint}" FontSize="11"
+                                           Foreground="{DynamicResource Brush.ForegroundMuted}" Margin="0,8,0,0"/>
+                                <ProgressBar x:Name="FlowEntryBar" Height="7" Margin="0,10,0,0" Value="0" Maximum="1"/>
+                                <TextBlock x:Name="FlowEntryStatus" Text="—" FontSize="10.5" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 流程图 -->
+                        <Grid x:Name="FlowView" Visibility="Collapsed" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Button Grid.Row="0" Style="{StaticResource Button.Base}" HorizontalAlignment="Left"
+                                    Padding="10,4" Margin="0,0,0,10"
+                                    Content="{DynamicResource String.Task.FlowBack}" Click="BackToFlowEntry_OnClick"/>
+                            <ListBox Grid.Row="1" x:Name="StepList" Background="Transparent" BorderThickness="0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="False">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="32"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- 连接线 + 节点圆点 -->
+                                            <Grid Grid.Column="0">
+                                                <Rectangle Width="2" HorizontalAlignment="Center" Margin="0,30,0,-4"
+                                                           Fill="{DynamicResource Brush.Border}"
+                                                           Visibility="{Binding LineVisibility, Mode=OneWay}"/>
+                                                <Border x:Name="Node" Width="20" Height="20" CornerRadius="10"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
+                                                        Background="#7C7C90" BorderBrush="{DynamicResource Brush.Border}"
+                                                        BorderThickness="1">
+                                                    <TextBlock x:Name="NodeGlyph" Text="{Binding Glyph, Mode=OneWay}" FontSize="11"
+                                                               Foreground="White" HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- 步骤卡片 -->
+                                            <Border Grid.Column="1" Padding="12,10" Margin="0,0,0,6"
+                                                    CornerRadius="{DynamicResource Radius.Small}"
+                                                    Background="{DynamicResource Brush.Elevated}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock FontSize="12.5" FontWeight="SemiBold">
+                                                            <Run Text="{Binding IndexText, Mode=OneWay}"/>
+                                                            <Run Text="  "/>
+                                                            <Run Text="{Binding Name, Mode=OneWay}"/>
+                                                        </TextBlock>
+                                                        <TextBlock Text="{Binding Detail, Mode=OneWay}" FontSize="10.5"
+                                                                   Foreground="{DynamicResource Brush.ForegroundMuted}"
+                                                                   TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding StatusText, Mode=OneWay}" FontSize="11"
+                                                               Foreground="{DynamicResource Brush.ForegroundMuted}"
+                                                               VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding StateKey, Mode=OneWay}" Value="Done">
+                                                <Setter TargetName="Node" Property="Background" Value="#4ADE80"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StateKey, Mode=OneWay}" Value="Running">
+                                                <Setter TargetName="Node" Property="Background" Value="#7C6BFF"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StateKey, Mode=OneWay}" Value="Failed">
+                                                <Setter TargetName="Node" Property="Background" Value="#F87171"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+
+            <!-- 操作 -->
+            <Border Grid.Row="2" Padding="14,12" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Task.Pause}" Padding="16,7" Click="Pause_OnClick"/>
+                    <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Task.Resume}" Margin="8,0,0,0" Padding="16,7" Click="Resume_OnClick"/>
+                    <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Task.Cancel}" Margin="8,0,0,0" Padding="16,7" Click="Cancel_OnClick"/>
+                    <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Task.Clear}" Margin="8,0,0,0" Padding="16,7" Click="Clear_OnClick"/>
+                    <Button x:Name="ResumeIncompleteButton" Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Task.ResumeIncomplete}" Margin="8,0,0,0" Padding="16,7" Visibility="Collapsed" Click="ResumeIncomplete_OnClick"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

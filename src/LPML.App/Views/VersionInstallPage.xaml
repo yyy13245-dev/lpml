@@ -1,0 +1,81 @@
+<UserControl x:Class="LPML.App.Views.VersionInstallPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,22,28,28">
+        <StackPanel>
+            <!-- 版本概览 -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="VersionTitle" Text="—" FontWeight="SemiBold" FontSize="19"/>
+                    <TextBlock x:Name="VersionMeta" Text="—" Style="{StaticResource Text.Caption}" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 保存名称 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.Install.SaveName}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource String.Install.SaveNameHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <TextBox x:Name="NameBox" Style="{StaticResource TextBox.Glass}"
+                             TextChanged="NameBox_OnTextChanged"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 加载器 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.Download.Loader}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource String.Install.LoaderHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,0,0,14"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" x:Name="LoaderKindCombo" SelectionChanged="LoaderKindCombo_OnSelectionChanged">
+                            <ComboBoxItem Content="{DynamicResource String.Msg.Download.Vanilla}" IsSelected="True"/>
+                            <ComboBoxItem Content="Fabric"/>
+                            <ComboBoxItem Content="Quilt"/>
+                            <ComboBoxItem Content="Forge"/>
+                            <ComboBoxItem Content="NeoForge"/>
+                            <ComboBoxItem Content="OptiFine"/>
+                        </ComboBox>
+                        <ComboBox Grid.Column="2" x:Name="LoaderVersionCombo"/>
+                    </Grid>
+                    <TextBlock x:Name="LoaderStatusText" Text="" Style="{StaticResource Text.Caption}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 实例文件夹 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.InstanceSettings.SectionFolder}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource String.Install.FolderHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <ComboBox x:Name="FolderCombo">
+    <ComboBox.ItemTemplate>
+        <DataTemplate>
+            <TextBlock Text="{Binding Name, Mode=OneWay}"/>
+        </DataTemplate>
+    </ComboBox.ItemTemplate>
+</ComboBox>
+                </StackPanel>
+            </Border>
+
+            <!-- 安装 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <CheckBox x:Name="IncludeAssetsCheck" Style="{StaticResource Switch}" Content="{DynamicResource String.Download.DownloadAssets}" IsChecked="True"/>
+                    <CheckBox x:Name="CreateInstanceCheck" Style="{StaticResource Switch}" Content="{DynamicResource String.Download.CreateInstance}"
+                              IsChecked="True" Margin="0,10,0,0"/>
+
+                    <Button x:Name="InstallButton" Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Install.Start}"
+                            Margin="0,18,0,0" HorizontalAlignment="Left" Padding="28,11" FontSize="14" Click="Install_OnClick"/>
+                    <TextBlock x:Name="StatusText" Text="" Style="{StaticResource Text.Caption}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

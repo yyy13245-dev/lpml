@@ -72,6 +72,15 @@
                             HorizontalAlignment="Left" Click="OpenRoot_OnClick"/>
                 </StackPanel>
             </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.About.LegalTitle}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10"/>
+                    <TextBlock Text="{DynamicResource String.About.LegalBody}" TextWrapping="Wrap" Style="{StaticResource Text.Subtitle}"/>
+                    <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.About.ViewLicense}" Margin="0,14,0,0" Padding="18,9"
+                            HorizontalAlignment="Left" Click="ViewLicense_OnClick"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

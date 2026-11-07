@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,7 +12,6 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>LPML.App</RootNamespace>
     <AssemblyName>LPML</AssemblyName>
-    <Company>LPML</Company>
     <Product>LPML Launcher</Product>
     <Version>0.0.001</Version>
     <ApplicationIcon>Assets\lpml.ico</ApplicationIcon>
@@ -41,6 +40,9 @@
     <None Include="..\..\docs\en-US\**\*.md" Link="docs\en-US\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- 完整免责声明：协议正文与文档里都指向程序目录下的这个文件 -->
     <None Include="..\..\DISCLAIMER.md" Link="DISCLAIMER.md" CopyToOutputDirectory="PreserveNewest" />
+    <!-- GPL 第 4 条：分发二进制时必须随附许可证文本与版权声明 -->
+    <None Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\NOTICE" Link="NOTICE" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- App.xaml 改作普通 Page，由 Program.Main 决定是否创建 Application（GUI / 命令行） -->

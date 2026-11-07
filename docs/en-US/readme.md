@@ -16,11 +16,13 @@ size-adaptive concurrency, and switchable download sources across
 > **LPML = Let's Play Minecraft Launcher**
 > Portable: nothing is written to the system drive, the registry, or AppData — copy the folder to a USB drive and go.
 
-**Status**: personal experimental project · no stability commitment · no open-source licence specified yet (see "Licence and Disclaimer" below)
+**Repository**: <https://github.com/yyy13245-dev/lpml>
+
+**Licence**: GNU GPL-3.0-or-later (SPDX: `GPL-3.0-or-later`) · full text in [LICENSE](/LICENSE) · copyright & attribution in [NOTICE](/NOTICE)
 
 **Requirements**: Windows 10/11 (x64) · [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) for framework-dependent builds · a Java runtime matching your Minecraft version
 
-**Contents**: [Highlights](#-highlights) · [Quick Start](#-quick-start) · [Build](#-build) · [Project Layout](#-project-layout) · [Known Limitations](#️-known-limitations) · [Licence and Disclaimer](#-licence-and-disclaimer) · [Full disclaimer](/DISCLAIMER.md)
+**Contents**: [Highlights](#-highlights) · [Quick Start](#-quick-start) · [Build](#-build) · [Project Layout](#-project-layout) · [Known Limitations](#️-known-limitations) · [Licence and Disclaimer](#-licence-and-disclaimer) · [Full disclaimer](/DISCLAIMER.md) · [NOTICE](/NOTICE)
 
 ---
 
@@ -241,7 +243,13 @@ dotnet run --project src\LPML.App
 
 ## 📄 Licence and Disclaimer
 
-**Licence**: this project currently has **no open-source licence specified**. No permission to copy, modify, distribute or use it commercially is granted by default; contact the repository maintainer if you need one. If a `LICENSE` file is added later, that file takes precedence.
+**Licence**: this project is licensed under the **GNU General Public License, version 3 or (at your option) any later version** (SPDX: `GPL-3.0-or-later`). The full text is in [LICENSE](/LICENSE). You may copy, modify and redistribute this software and derivative works; when you convey it you must preserve copyright and licence notices, include a copy of the licence, and make the complete corresponding source available under the same licence.
+
+**Copyright & attribution**: all copyright and contributor attributions for this project are collected in **[NOTICE](/NOTICE)** rather than repeated in every source file. GPLv3 section 4 requires an appropriate copyright notice on **each copy** of the work; the FSF *How to Apply These Terms* template likewise allows each file to carry only "a pointer to where the full notice is found" — per-file headers are described as "safest", not mandatory. A root `Directory.Build.props` writes the copyright line into the assembly metadata (visible under File Properties → Details on the compiled dll), and `NOTICE` + `LICENSE` shipped with every source and binary package constitute that full notice. If you convey a modified version, mark the changed files with your modifications and their dates as required by GPL section 5, and keep those files.
+
+**Corresponding source**: every binary release is paired with a same-version source release; they correspond to each other and are both licensed under GPL-3.0-or-later, and that source package is the "complete corresponding source code" for the binary. The project repository is <https://github.com/yyy13245-dev/lpml>.
+
+This licence covers LPML only. It does **not** cover the Minecraft client, mods, modpacks, Java runtimes, the Terracotta binary or other third-party content, each of which remains subject to its own terms (see below and [DISCLAIMER.md](/DISCLAIMER.md)).
 
 **Disclaimer summary** (full text: [DISCLAIMER.md](/DISCLAIMER.md)):
 

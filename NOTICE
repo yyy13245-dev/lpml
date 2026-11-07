@@ -1,0 +1,66 @@
+LPML — Let's Play Minecraft Launcher
+版权与署名声明 / Copyright and attribution notice
+
+本文件是本项目依 GNU GPLv3 第 4 条所要求的「版权声明与许可声明」的
+集中存放位置。GPL 要求的是「每一份副本（copy）」须保留适当的版权
+声明，并不要求每个源文件头部都重复一行版权。因此本项目把完整
+声明集中写在这里，并随每一份源码包与二进制包一同提供
+LICENSE + NOTICE。
+
+根目录的 Directory.Build.props 会把版权行写入编译产物的程序集元数据，
+因此在「文件属性 → 详细信息」里也能看到；无需在 100+ 个 .cs 文件
+头部逐个填写名字。
+
+====================================================================
+版权署名 / Copyright holder
+====================================================================
+Copyright (C) 2026  LPML contributors
+
+====================================================================
+许可声明 / Licence notice
+====================================================================
+LPML is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+LPML is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+完整文本见随附的 LICENSE 文件。
+SPDX-License-Identifier: GPL-3.0-or-later
+
+====================================================================
+如果你修改并分发本软件 / If you convey a modified version
+====================================================================
+请在被修改的文件中显著标明你做了修改以及修改日期（GPL 第 5(a) 条），
+保留本 NOTICE、LICENSE 与所有原有的版权与无担保声明，并以
+GPL-3.0-or-later 整体授权修改后的作品。若作品带有交互式用户界面，
+还须按 GPL 第 5(d) 条显示 Appropriate Legal Notices —— LPML 的
+「关于」页已提供该入口。
+
+When conveying a modified version, mark the modified files prominently
+with your changes and their dates (GPL section 5(a)), keep this NOTICE,
+LICENSE and all existing copyright and warranty disclaimer notices,
+and license the whole work under GPL-3.0-or-later. If the work has an
+interactive user interface, section 5(d) also requires displaying
+Appropriate Legal Notices; LPML provides this in its About page.
+
+====================================================================
+第三方归属 / Third-party attribution
+（以下不属于 LPML 的版权，仅列明各自权利人）
+====================================================================
+Terracotta | 陶瓦联机   © Burning_TNT 及贡献者
+                        AGPL-3.0-or-later（含例外条款），基于 EasyTier
+EasyTier                归其各自权利人所有
+Minecraft / Mojang / Microsoft / Modrinth / BMCLAPI / Forge /
+Fabric / Quilt / NeoForge 等名称与商标，归各自权利人所有
+
+上述第三方二进制不随本源码仓库分发，由用户在运行时自行获取；
+LPML 仅通过本地 HTTP API 与未经修改的 Terracotta 官方二进制交互。
+====================================================================

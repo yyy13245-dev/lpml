@@ -1,8 +1,8 @@
 ﻿# User Agreement & Disclaimer
 
-> **Agreement version 1** · Please read this document in full before your first launch. Clicking **Agree and Continue** means you have read, understood and accepted every term below. If you do not agree, click **Decline and Exit** and delete the software and all data it created.
+> **Agreement version 1** · Please read this document in full before your first launch. Clicking **Agree and Continue** means you have read, understood and accepted every term below. If you do not agree, click **Decline and Exit** and stop using the software.
 
-LPML (Let's Play Minecraft Launcher) is a third-party, unofficial launcher for Minecraft Java Edition. This document is the entire understanding between you and the maintainers regarding use of this software. The full disclaimer is also provided as `DISCLAIMER.md` in the program folder.
+LPML (Let's Play Minecraft Launcher) is a third-party, unofficial launcher for Minecraft Java Edition. LPML is released under GNU GPL-3.0-or-later. This document governs **the act of using this software** and the allocation of risk only; it does not limit or reduce your rights to copy, modify and redistribute the software as granted by `LICENSE`. The full disclaimer is also provided as `DISCLAIMER.md` in the program folder, and copyright / attribution notices as `NOTICE`.
 
 ---
 
@@ -64,19 +64,19 @@ Claims, investigations, fines, costs and losses arising from your use or misuse 
 
 ## 9. Changes and Versioning
 
-1. The maintainers may modify this agreement, the software or its features at any time without notice.
+1. The maintainers may revise the terms of this agreement that govern use; such revisions do not change the GPL licence applicable to copies already distributed.
 2. When the agreement version changes, the GUI will **show this agreement again** at startup. Continued use constitutes acceptance of the updated version.
 3. On the first command-line (`--cli`) run this agreement is displayed in full, and only typing 是 / 我同意 / 同意 / yes accepts it and allows you to continue; any other input, a blank line, or unreadable input closes the CLI immediately. Using the software in scripted or unattended scenarios likewise constitutes acceptance of all terms of this agreement.
 
 ## 10. Consent and Exit
 
 - **Agree and Continue** (in the CLI, type `是` / `我同意` / `同意` / `yes`): you have read, understood and accepted this agreement and `DISCLAIMER.md` in full, and only then may you use the software. Consent is recorded in local configuration only and is never uploaded.
-- **Decline and Exit**, pressing Esc, or closing this window: the launcher exits immediately. You should then delete the software and all data it created, and must not continue using it.
+- **Decline and Exit**, pressing Esc, or closing this window: the launcher exits immediately and you must stop using the software; this does not affect your rights under `LICENSE` to copy, modify or redistribute the software.
 - You can re-read this agreement at any time from the **Documents** page.
 
 ## 11. Miscellaneous
 
-1. This agreement together with `DISCLAIMER.md` is the entire understanding between you and the maintainers regarding use of this software and supersedes any prior oral or written statement; nothing else creates an additional warranty.
+1. This agreement together with `DISCLAIMER.md` governs use only; it does not replace or alter the permissions granted by `LICENSE`, which prevails in the event of a conflict.
 2. If any provision is held invalid or unenforceable, the remaining provisions stay in effect.
 3. This agreement is not legal advice. If you have questions about its terms, consult a qualified professional.
 

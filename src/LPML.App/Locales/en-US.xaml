@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML en-US 语言包 · English -->
-    <!-- 词条 1374 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1378 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">Preparing…</sys:String>
@@ -1455,7 +1455,7 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Cli.CmdMpStatus">Multiplayer core: {0} · last room {1} · mode {2}</sys:String>
     <sys:String x:Key="String.Cli.CmdAgreementReplay">User agreement (version {0}):</sys:String>
     <sys:String x:Key="String.Cli.CmdDisclaimer">Full disclaimer: {0}</sys:String>
-    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · language {0}&#x0A;A third-party, unofficial Minecraft Java Edition launcher, not affiliated with Mojang or Microsoft.&#x0A;Source, UI text and docs are mostly AI-assisted, provided "as is"; use at your own risk.&#x0A;Agreement version {1} · full disclaimer in DISCLAIMER.md</sys:String>
+    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · language {0}&#x0A;A third-party, unofficial Minecraft Java Edition launcher, not affiliated with Mojang or Microsoft.&#x0A;Source, UI text and docs are mostly AI-assisted, provided "as is"; use at your own risk.&#x0A;Agreement version {1} · full disclaimer in DISCLAIMER.md&#x0A;GPL-3.0-or-later · copyright &amp; attribution in NOTICE · provided with ABSOLUTELY NO WARRANTY</sys:String>
     <sys:String x:Key="String.Multi.Copyright">Terracotta © Burning_TNT and contributors · AGPL-3.0-or-later (with exception); built on EasyTier. LPML talks to the unmodified official binary over its local HTTP API.</sys:String>
     <sys:String x:Key="String.Multi.HmclCompat">Invitation codes use the same U/XXXX-XXXX-XXXX-XXXX format as HMCL / PCL CE / FCL, so they can join each other directly.</sys:String>
     <sys:String x:Key="String.Multi.HmclNotice">HMCL's official multiplayer page is currently marked "under maintenance". Connectivity depends on the other launcher version and network; interoperability is not guaranteed.</sys:String>
@@ -1500,4 +1500,8 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Multi.ReusedHmclCore">Reused HMCL's Terracotta binary: {0}</sys:String>
     <sys:String x:Key="String.Multi.InstalledFrom">Terracotta v{0} installed (source: {1})</sys:String>
     <sys:String x:Key="String.Multi.ChecksumWarning">The code checksum looks wrong; the join will still be attempted, please double-check it.</sys:String>
+    <!-- About: GPL Appropriate Legal Notices -->
+    <sys:String x:Key="String.About.LegalTitle">Licence &amp; legal notices</sys:String>
+    <sys:String x:Key="String.About.LegalBody">This software is licensed under GNU GPL-3.0-or-later and provided "as is", with ABSOLUTELY NO WARRANTY.&#x0A;Copyright and contributor attributions are collected in the NOTICE file in the program folder; the full licence text is in LICENSE.&#x0A;You may copy, modify and redistribute it, provided these notices are preserved and the corresponding source is offered under the same licence.</sys:String>
+    <sys:String x:Key="String.About.ViewLicense">View LICENSE &amp; NOTICE</sys:String>
 </ResourceDictionary>

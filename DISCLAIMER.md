@@ -62,13 +62,15 @@ LPML（Let's Play Minecraft Launcher）是**第三方、非官方**的 Minecraft
 
 ### 8. 协议版本与同意
 
-首次启动图形界面时会显示《用户协议与免责声明》，点击"同意并继续"即表示你已完整阅读、理解并接受该协议及本声明。协议版本更新后会再次显示；继续使用即视为接受更新后的版本。不同意者应立即退出并删除本软件及其产生的全部数据。
+首次启动图形界面时会显示《用户协议与免责声明》，点击"同意并继续"即表示你已完整阅读、理解并接受该协议及本声明。协议版本更新后会再次显示；继续使用即视为接受更新后的版本。不同意者应停止使用本软件；这不影响你依 `LICENSE` 复制、修改或分发本软件的权利。
 
 命令行模式（`--cli`）第一次启动时同样会完整显示该协议，只有输入「是 / 我同意 / 同意 / yes」之一才表示接受并继续使用；输入其他内容、直接回车或无法读取输入时，命令行会直接退出。在脚本或无人值守场景中使用本软件，同样视为已阅读并接受上述全部条款。
 
 ### 9. 其他
 
-维护者可随时修改或停止本项目、变更本声明或调整功能，无需另行通知。本声明与《用户协议与免责声明》构成你与维护者之间就使用本软件事宜的完整约定；任何口头或书面补充均不构成额外担保。
+本软件依 **GNU General Public License v3.0 或任何更新版本**（`GPL-3.0-or-later`）发布，完整文本见随附的 `LICENSE` 文件。本声明与《用户协议与免责声明》仅约束**使用本软件的行为**及由此产生的风险分配，**不限制、不减损 GPL 授予你的复制、修改、分发与获取源代码的权利**，也不对行使这些权利附加额外条件。本软件的版权与贡献者署名集中记载于随附的 `NOTICE` 文件，分发时须一并保留。项目仓库地址：<https://github.com/yyy13245-dev/lpml>。本声明或用户协议与 `LICENSE` 理解不一致时，以 `LICENSE` 为准。
+
+本声明不构成法律意见。如对条款有疑问，请自行咨询具备资质的专业人士。
 
 ---
 
@@ -129,10 +131,12 @@ Claims, investigations, fines, costs and losses arising from your use or misuse 
 
 ### 8. Agreement version and consent
 
-On first GUI launch a *User Agreement & Disclaimer* is displayed; clicking **Agree and Continue** means you have read, understood and accepted that agreement and this disclaimer. An updated version is shown again when the agreement version changes; continued use constitutes acceptance of the updated terms. If you do not agree, exit immediately and delete the software and all data it created.
+On first GUI launch a *User Agreement & Disclaimer* is displayed; clicking **Agree and Continue** means you have read, understood and accepted that agreement and this disclaimer. An updated version is shown again when the agreement version changes; continued use constitutes acceptance of the updated terms. If you do not agree, stop using the software; this does not affect your rights under `LICENSE` to copy, modify or redistribute it.
 
 On the first command-line (`--cli`) run the agreement is likewise displayed in full, and only typing 是 / 我同意 / 同意 / yes accepts it and lets you continue; any other input, a blank line, or unreadable input closes the CLI. Using the software in scripted or unattended scenarios likewise constitutes acceptance of all the terms above.
 
 ### 9. Miscellaneous
 
-The maintainers may modify or discontinue the project, change this disclaimer or adjust features at any time without notice. This disclaimer together with the *User Agreement & Disclaimer* forms the entire understanding between you and the maintainers regarding use of this software; no oral or written statement creates any additional warranty.
+This software is released under the **GNU General Public License, version 3 or (at your option) any later version** (`GPL-3.0-or-later`); the full text is in the accompanying `LICENSE` file. This disclaimer and the *User Agreement & Disclaimer* govern **the act of using this software** and the allocation of risk only. They **do not limit or reduce your rights under the GPL** to copy, modify, redistribute and obtain the source code, and impose no additional conditions on exercising those rights. Copyright and contributor attributions are collected in the accompanying `NOTICE` file, which must be preserved when conveying the software. The project repository is <https://github.com/yyy13245-dev/lpml>. In the event of a conflict, `LICENSE` prevails.
+
+Neither version of this disclaimer constitutes legal advice. Consult a qualified professional if you have questions.

@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    全项目唯一的版权元数据来源。MSBuild 会自动把本文件导入到本目录下
+    的所有 .csproj（App / Core / Core.Tests），无需逐个项目重复声明。
+
+    署名只在根目录的 NOTICE 里填一次；这里通过程序集元数据把版权行
+    写进编译产物（dll 的「文件属性 → 详细信息」可见），从而满足
+    GPLv3 第 4 条对「每一份副本保留适当版权声明」的要求，
+    又不必在 100+ 个 .cs 文件头部逐个填写名字。
+
+    修改并分发本软件时，请同时保留 NOTICE、LICENSE，
+    并按 GPL 第 5 条在被修改的文件中标注改动与日期。
+  -->
+  <PropertyGroup>
+    <Authors>LPML contributors</Authors>
+    <Company>LPML contributors</Company>
+    <Copyright>Copyright (C) 2026 LPML contributors. See NOTICE for the full notice.</Copyright>
+  </PropertyGroup>
+</Project>

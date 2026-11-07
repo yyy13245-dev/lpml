@@ -28,4 +28,17 @@ public partial class AboutPage : UserControl, IRefreshablePage
     {
         Process.Start(new ProcessStartInfo("explorer.exe", Context.Paths.RootDirectory) { UseShellExecute = true });
     }
+
+    private void ViewLicense_OnClick(object sender, RoutedEventArgs e)
+    {
+        var license = System.IO.Path.Combine(Context.Paths.RootDirectory, "LICENSE");
+        if (System.IO.File.Exists(license))
+        {
+            Process.Start(new ProcessStartInfo(license) { UseShellExecute = true });
+        }
+        else
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", Context.Paths.RootDirectory) { UseShellExecute = true });
+        }
+    }
 }

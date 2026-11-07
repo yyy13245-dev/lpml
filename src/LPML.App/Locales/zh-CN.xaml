@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML zh-CN 语言包 · 简体中文 -->
-    <!-- 词条 1374 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1378 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">准备中…</sys:String>
@@ -1455,7 +1455,7 @@
     <sys:String x:Key="String.Cli.CmdMpStatus">联机组件：{0} · 上次房间 {1} · 模式 {2}</sys:String>
     <sys:String x:Key="String.Cli.CmdAgreementReplay">用户协议（版本 {0}）：</sys:String>
     <sys:String x:Key="String.Cli.CmdDisclaimer">完整免责声明：{0}</sys:String>
-    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · 界面语言 {0}&#x0A;第三方、非官方 Minecraft Java 版启动器，与 Mojang / Microsoft 无关联。&#x0A;源代码、界面文案与文档主要由 AI 辅助生成，按「现状」提供，风险自担。&#x0A;协议版本 {1} · 完整免责声明见 DISCLAIMER.md</sys:String>
+    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · 界面语言 {0}&#x0A;第三方、非官方 Minecraft Java 版启动器，与 Mojang / Microsoft 无关联。&#x0A;源代码、界面文案与文档主要由 AI 辅助生成，按「现状」提供，风险自担。&#x0A;协议版本 {1} · 完整免责声明见 DISCLAIMER.md&#x0A;GPL-3.0-or-later · 版权与署名见 NOTICE · 本软件不提供任何担保</sys:String>
     <sys:String x:Key="String.Multi.Copyright">Terracotta | 陶瓦联机 © Burning_TNT 及贡献者 · AGPL-3.0-or-later（含例外条款）；基于 EasyTier。本启动器通过本地 HTTP API 与未经修改的官方程序交互。</sys:String>
     <sys:String x:Key="String.Multi.HmclCompat">邀请码与 HMCL / PCL CE / FCL 使用同一套 U/XXXX-XXXX-XXXX-XXXX 码制，可以直接互连。</sys:String>
     <sys:String x:Key="String.Multi.HmclNotice">HMCL 官方多人联机页面当前标注为「维护状态」；能否连通取决于对方版本与网络，本启动器不保证互通成功率。</sys:String>
@@ -1500,4 +1500,8 @@
     <sys:String x:Key="String.Multi.ReusedHmclCore">已复用 HMCL 的联机核心：{0}</sys:String>
     <sys:String x:Key="String.Multi.InstalledFrom">联机核心 v{0} 安装完成（来源：{1}）</sys:String>
     <sys:String x:Key="String.Multi.ChecksumWarning">邀请码校验位看起来不对，仍会尝试加入，请确认没有抄错。</sys:String>
+    <!-- About: GPL Appropriate Legal Notices -->
+    <sys:String x:Key="String.About.LegalTitle">许可与法律通知</sys:String>
+    <sys:String x:Key="String.About.LegalBody">本软件依 GNU GPL-3.0-or-later 授权，按「现状」提供，不提供任何担保。&#x0A;版权与贡献者署名集中写在程序目录下的 NOTICE 文件，完整许可文本见 LICENSE。&#x0A;你可以自由复制、修改与分发；分发时须保留这些声明并以同一许可提供对应源码。</sys:String>
+    <sys:String x:Key="String.About.ViewLicense">查看 LICENSE 与 NOTICE</sys:String>
 </ResourceDictionary>

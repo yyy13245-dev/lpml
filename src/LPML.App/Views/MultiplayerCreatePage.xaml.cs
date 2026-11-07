@@ -31,7 +31,27 @@ public sealed partial class MultiplayerCreatePage : UserControl, IDisposable
         InitializeComponent();
         Picker.Initialize(_ctx, OnInstanceLaunched);
         Loaded += OnLoaded;
+        _core.RoomCodeChanged += (_, code) => Dispatcher.InvokeAsync(() =>
+        {
+            RoomCodeText.Text = code;
+            ResultAddressText.Text = Lang.T("String.Multi.CreatedHint");
+            ResultBorder.Visibility = Visibility.Visible;
+        });
+        _core.StateUpdated += (_, state) => Dispatcher.InvokeAsync(() =>
+            LaunchStatusDetail.Text = StateText(state.Kind));
     }
+
+    private static string StateText(TerracottaStateKind kind) => kind switch
+    {
+        TerracottaStateKind.HostScanning => Lang.T("String.Multi.StateHostScanning"),
+        TerracottaStateKind.HostStarting => Lang.T("String.Multi.StateHostStarting"),
+        TerracottaStateKind.HostOk => Lang.T("String.Multi.StateHostOk"),
+        TerracottaStateKind.GuestConnecting => Lang.T("String.Multi.StateGuestConnecting"),
+        TerracottaStateKind.GuestStarting => Lang.T("String.Multi.StateGuestStarting"),
+        TerracottaStateKind.GuestOk => Lang.T("String.Multi.StateGuestOk"),
+        TerracottaStateKind.Exception => Lang.F("String.Multi.StateException", ""),
+        _ => Lang.T("String.Multi.StateWaiting")
+    };
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
@@ -123,28 +143,38 @@ public sealed partial class MultiplayerCreatePage : UserControl, IDisposable
             Notice.Info(Lang.T("String.Multi.Title"), Lang.T("String.Multi.Err.NoDetectionYet"));
     }
 
-    private void Generate_OnClick(object? sender, RoutedEventArgs e)
+    private async void Generate_OnClick(object? sender, RoutedEventArgs e)
     {
-        var address = AddressBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(address))
+        if (GenerateButton.IsEnabled == false) return;
+        GenerateButton.IsEnabled = false;
+        try
         {
-            Notice.Warn(Lang.T("String.Multi.Title"), Lang.T("String.Multi.Err.AddressEmpty"));
-            return;
+            var fixedCode = _ctx.Settings.Terracotta.FixedRoomCode?.Trim();
+            var player = _ctx.Settings.Terracotta.PlayerName?.Trim();
+            if (string.IsNullOrWhiteSpace(player)) player = Environment.UserName;
+
+            RoomCodeText.Text = Lang.T("String.Multi.Creating");
+            ResultAddressText.Text = Lang.T("String.Multi.StepAddressHint");
+            ResultBorder.Visibility = Visibility.Visible;
+
+            await _core.CreateRoomAsync(string.IsNullOrWhiteSpace(fixedCode) ? null : fixedCode, player)
+                .ConfigureAwait(true);
+
+            _ctx.Settings.Terracotta.LastMode = TerracottaSessionMode.Create;
+            _ctx.Save();
         }
-        if (!IsAddressValid(address))
+        catch (OperationCanceledException)
         {
-            Notice.Warn(Lang.T("String.Multi.Title"), Lang.T("String.Multi.Err.AddressInvalid"));
-            return;
+            Notice.Info(Lang.T("String.Multi.Title"), Lang.T("String.Multi.Err.Canceled"));
         }
-
-        var code = TerracottaCore.GenerateRoomCode();
-        _ctx.Settings.Terracotta.LastRoomCode = code;
-        _ctx.Settings.Terracotta.LastMode = TerracottaSessionMode.Create;
-        _ctx.Save();
-
-        RoomCodeText.Text = code;
-        ResultAddressText.Text = Lang.F("String.Multi.RoomAddress", address);
-        ResultBorder.Visibility = Visibility.Visible;
+        catch (Exception ex)
+        {
+            Notice.Warn(Lang.T("String.Multi.Title"), ex.Message);
+        }
+        finally
+        {
+            GenerateButton.IsEnabled = true;
+        }
     }
 
     private static bool IsAddressValid(string address)
@@ -181,5 +211,6 @@ public sealed partial class MultiplayerCreatePage : UserControl, IDisposable
         _leaving = false;
     }
 
-    public void Dispose() => _core.Dispose();
+    // 核心实例由联机入口页创建并共享给子页，这里不释放，避免返回后失效。
+    public void Dispose() { }
 }

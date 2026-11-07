@@ -218,7 +218,7 @@ public sealed class LauncherContext
             {
                 ["profiles"] = profiles,
                 ["selectedProfile"] = Instances.Find(Settings.SelectedInstanceId)?.VersionId ?? "",
-                ["launcherVersion"] = "LPML 1.0.0"
+                ["launcherVersion"] = $"LPML {BuildInfo.Version}"
             };
             Json.Save(file, payload);
         }

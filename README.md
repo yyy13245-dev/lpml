@@ -1,4 +1,4 @@
-# LPML — Let's Play Minecraft Launcher
+﻿# LPML — Let's Play Minecraft Launcher
 
 一款用 **.NET 10 + WPF** 写的 Minecraft Java 版启动器：界面简洁、功能藏在分级菜单里，
 自定义程度对标 PCL / HMCL，多线程分段下载 + 按文件大小自适应并发，下载源可在
@@ -53,7 +53,7 @@
 - **语言包分离**：全部界面文本放在 `src/LPML.App/Locales/*.xaml`（ResourceDictionary），代码里**零硬编码文案**
 - **引用方式**：XAML 用 `{DynamicResource String.模块.项}`，C# 用 `Lang.T("...")` / `Lang.F("...", args)`，Core 层用 `L.T` / `L.F`
 - **运行时切换**：设置 → 高级 → 界面语言，换语言包后界面**立即刷新**，无需重启（导航树等代码生成的部分自动重建）
-- **内置语言**：简体中文（zh-CN）、English（en-US），各 **1331 条**词条，键名一一对应
+- **内置语言**：简体中文（zh-CN）、English（en-US），各 **1374 条**词条，键名一一对应
 - 键名规范 `String.<模块>.<项>`，例如：
   - `String.Settings.Title`、`String.Account.LoginSuccess`、`String.Msg.Download.Installing`
 - 新增语言只需复制一份 `Locales/zh-CN.xaml` → 改文件名与值 → 在 `LauncherLanguage` 加一档
@@ -452,8 +452,30 @@ Windows 任务管理器的「进程」页会把两个 LPML 折叠在**同一组*
 - 守护进程**不创建 WPF Application、不加载任何界面资源**，所以界面样式崩溃也不会拖累它；
   多开时按会话 GUID 隔离管道，互不串台。
 
+### 多人联机（陶瓦联机 / EasyTier）
+
+基于 [Terracotta | 陶瓦联机](https://burningtnt.github.io/Terracotta/) 与 [EasyTier](https://easytier.cn/) 的 P2P 联机，**开箱即用**：
+
+- **默认路线**：点「下载联机核心」即自动下载官方 v0.4.2 发行包，国内镜像优先（Gitee → CNB → 镜像站 → GitHub）；
+  版本元数据优先读取 HMCL 同款 `terracotta.json`，拉不到就回退内置模板与已核实的 SHA-512，不依赖额外服务。
+- **官方集成方式**：以 `--hmcl` 集成模式拉起未经修改的官方二进制，只监听 `127.0.0.1`；端口由系统随机分配，
+  通过 `terracotta.lock`（2 字节大端端口）/ 端口 JSON / 进程输出发现。所有操作走本地 HTTP API：
+  `/state`、`/state/scanning`、`/state/guesting`、`/state/ide`、`/meta`、`/log`、`/panic?peaceful=true`。
+- **兼容 HMCL**：邀请码使用同一套 `U/XXXX-XXXX-XXXX-XXXX` 码制（base-34，排除 I/O），
+  与 HMCL / PCL CE / FCL 生成的码直接互通；也可在「配置」里填 HMCL 已下载的核心目录，复用同一份二进制。
+- **自己的配置仍保留**：可覆盖下载地址、版本、校验和（SHA-512，兼容旧 SHA-256）；
+  v0.4.2 起支持自定义 EasyTier 公共节点（每行一个，与内置节点合并）；还可设固定邀请码与房间内显示名。
+- **状态实时可见**：房主侧扫描端口 / 创建房间 / 就绪，加入侧连接中 / 已加入，逐状态显示。
+- **注意**：联机基于 P2P，稳定性不如服务器中继，适合朋友之间临时联机，不能替代 Minecraft Java 版服务器。
+  HMCL 官方多人联机页面当前标注为「维护状态」，能否连通取决于对方版本与网络，本启动器不保证互通成功率。
+
+> **版权**：Terracotta | 陶瓦联机 © Burning_TNT 及贡献者，依 **AGPL-3.0-or-later**（含例外条款）授权；基于 EasyTier。
+> LPML 不静态或动态链接其代码，仅通过进程间通信接口（本地 HTTP API）与**未经修改**的官方程序交互，
+> 并在联机界面明显处标注了版权信息。该二进制由启动器在运行时下载到 `LPML\tools\terracotta\`，
+> **不随源码仓库分发**；如需自行分发，请遵守 Terracotta 与 EasyTier 各自的许可证。
+
 ### 其他
-- **i18n**：1331 条词条分离到 `Locales/zh-CN.xaml` 与 `Locales/en-US.xaml`，支持运行时切换
+- **i18n**：1374 条词条分离到 `Locales/zh-CN.xaml` 与 `Locales/en-US.xaml`，支持运行时切换
 - **实例隔离**：独立 mods / saves / config；两种隔离模式可切换与互相迁移，实例单独覆盖
 - 实例级覆盖：内存、Java 路径、JVM 参数、窗口尺寸、全屏、服务器直连
 - 模组管理：读取 fabric.mod.json / mods.toml / mcmod.info 元信息，一键启停（`.jar.disabled`）、删除、添加
@@ -575,6 +597,7 @@ LPML **不内置、不分发、不代管任何 Client ID**。启动器只提供�
 7. **本地库复用**的索引文件没有大小上限，装很多版本后会缓慢增长（索引本身很小，扫描靠大小+修改时间跳过未变动文件）。
 8. **同时开多个启动器实例**会共用同一个 `lpml.log`（每次启动都会归档上一次），日志会混在一起；管道本身按会话隔离，不会串到别的进程，只是文件层面共用。
 9. 守护进程设置（开关 / 阈值 / 自动关闭）在**启动时读取**，改完要重启启动器才生效。
+10. **多人联机依赖陶瓦公共节点**，NAT 穿透失败时会退化到中继，延迟与稳定性不由本启动器控制；HMCL 官方多人联机页面当前处于维护状态，跨启动器互通不保证成功。
 
 ---
 
@@ -588,6 +611,7 @@ LPML **不内置、不分发、不代管任何 Client ID**。启动器只提供�
 - 本软件及全部文档主要由 AI 辅助生成，按「现状」提供，不提供任何明示或默示担保。
 - 下载、安装、运行游戏、模组与整合包，以及账户登录、联网请求、文件读写的一切风险由用户自行承担；请自行备份存档与配置。
 - 在法律允许的最大范围内，维护者与贡献者不对任何直接或间接损失负责；本声明不排除适用法律赋予你的、不可放弃的权利。
+- **第三方组件**：联机功能使用未经修改的 Terracotta | 陶瓦联机（© Burning_TNT 及贡献者，AGPL-3.0-or-later 含例外条款）与 EasyTier 二进制，版权归各自权利人。LPML 仅通过其本地 HTTP API 交互，界面已标注版权信息；该例外条款不使 LPML 本身被 AGPL 涵盖。
 
 首次启动会显示《用户协议与免责声明》（`docs/<语言>/agreement.md`）：图形界面点击「同意并继续」，命令行输入 `是` / `我同意` / `同意` / `yes`，同意后才能使用；「文档」页可随时重新查阅，命令行也可输入 `agreement` 重看。
 

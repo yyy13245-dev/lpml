@@ -9,7 +9,7 @@
     <AssemblyName>LPML.Core</AssemblyName>
     <Company>LPML</Company>
     <Product>LPML Launcher Core</Product>
-    <Version>1.0.0</Version>
+    <Version>0.0.001</Version>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
     <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;CS8622;CS0168;CS0169;CS1998;CS0414;CS0067</NoWarn>

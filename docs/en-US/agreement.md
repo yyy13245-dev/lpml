@@ -1,4 +1,4 @@
-# User Agreement & Disclaimer
+﻿# User Agreement & Disclaimer
 
 > **Agreement version 1** · Please read this document in full before your first launch. Clicking **Agree and Continue** means you have read, understood and accepted every term below. If you do not agree, click **Decline and Exit** and delete the software and all data it created.
 

@@ -45,6 +45,12 @@ public static class Program
     private static bool IsOneShot(string[] args) =>
         args.Any(a => OneShotSwitches.Contains(a, StringComparer.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// 程序版本号，取自 csproj 的 &lt;Version&gt;（程序集信息版本），不硬编码。
+    /// 唯一来源为 Core 的 BuildInfo，日志、启动参数与游戏配置文件都从那里读取。
+    /// </summary>
+    private static string AppVersion() => BuildInfo.Version;
+
     [STAThread]
     public static int Main(string[] args)
     {
@@ -53,9 +59,12 @@ public static class Program
         if (args.Any(a => a.Equals("--guard", StringComparison.OrdinalIgnoreCase)))
             return GuardProcess.Run(args);
 
-        // 尽早启动守护进程。Start 内部会先挂本地文件，
-        // 所以"守护进程还没起来"这段启动日志由主进程自己记录，一条不丢。
+        // 先挂本地日志并打印版本号，再尽早启动守护进程。
+        // 守护进程还没起来的这段日志由主进程自己记录，一条不丢；
+        // --no-guard 时也不会只留在内存缓冲里而没落盘。
         var paths = new AppPaths();
+        Log.Service.AttachFile(paths.LauncherLogFile);
+        Log.Info("App", $"LPML {AppVersion()} 启动");
         var options = GuardOptions.Load(paths.SettingsFile, args);
         var exe = ExecutablePath();
         if (!string.IsNullOrEmpty(exe))

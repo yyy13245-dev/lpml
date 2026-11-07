@@ -6,13 +6,27 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="28,20,28,28">
             <TextBlock Text="{DynamicResource String.Multi.Title}" Style="{StaticResource Text.Title}"/>
-            <TextBlock Text="{DynamicResource String.Multi.Subtitle}" Style="{StaticResource Text.Subtitle}" Margin="0,4,0,18"/>
+            <TextBlock Text="{DynamicResource String.Multi.Subtitle}" Style="{StaticResource Text.Subtitle}" Margin="0,4,0,14"/>
+
+            <!-- 版权标注：陶瓦 AGPL 例外条款要求在通过 HTTP API 集成时于界面明显处标识 -->
+            <Border Style="{StaticResource Card}" Background="{DynamicResource Brush.AccentSoft}"
+                    BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource String.Multi.Copyright}" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{DynamicResource String.Multi.HmclCompat}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock Text="{DynamicResource String.Multi.HmclNotice}" Style="{StaticResource Text.Caption}"
+                               Foreground="{DynamicResource Brush.ForegroundMuted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
 
             <!-- 1. 联机核心：下载/状态 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="{DynamicResource String.Multi.CoreTitle}" Style="{StaticResource Text.Subtitle}" Margin="0,0,0,6"/>
-                    <TextBlock Text="{DynamicResource String.Multi.CoreSubtitle}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <TextBlock Text="{DynamicResource String.Multi.CoreSubtitle}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock x:Name="DefaultRouteText" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource String.Multi.DefaultRouteHint}" Style="{StaticResource Text.Caption}"
+                               Foreground="{DynamicResource Brush.ForegroundMuted}" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                     <Grid>
                         <Grid.ColumnDefinitions>

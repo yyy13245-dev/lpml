@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML zh-CN 语言包 · 简体中文 -->
-    <!-- 词条 1331 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1374 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">准备中…</sys:String>
@@ -17,7 +17,7 @@
     <!-- About -->
     <sys:String x:Key="String.About.Title">关于 LPML</sys:String>
     <sys:String x:Key="String.About.Subtitle">轻量、绿色、可定制的 Minecraft 启动器</sys:String>
-    <sys:String x:Key="String.About.Version">版本 1.0.0 · .NET 10 + WPF</sys:String>
+    <sys:String x:Key="String.About.Version">版本 0.0.001 · .NET 10 + WPF</sys:String>
     <sys:String x:Key="String.About.PortableTitle">绿色运行承诺</sys:String>
     <sys:String x:Key="String.About.DataLocation">数据位置</sys:String>
     <sys:String x:Key="String.About.RootDir">根目录</sys:String>
@@ -934,10 +934,10 @@
     <sys:String x:Key="String.Core.Log.Modpack.BlockedPaths">已拦截 {0} 个越出实例目录的压缩包条目（疑似 Zip Slip）。</sys:String>
 
     <!-- ══ 联机（局域网） ══ -->
-    <sys:String x:Key="String.Multi.Title">联机（局域网）</sys:String>
-    <sys:String x:Key="String.Multi.Subtitle">和同一局域网里的朋友一起玩，不连外网、不穿透内网。</sys:String>
+    <sys:String x:Key="String.Multi.Title">多人联机</sys:String>
+    <sys:String x:Key="String.Multi.Subtitle">基于陶瓦联机（Terracotta / EasyTier）的 P2P 联机，与 HMCL、PCL CE 等启动器互通。</sys:String>
     <sys:String x:Key="String.Multi.CoreTitle">联机核心</sys:String>
-    <sys:String x:Key="String.Multi.CoreSubtitle">核心程序放在 LPML\tools\terracotta，随启动器一起发布。填写下载地址后即可下载安装。</sys:String>
+    <sys:String x:Key="String.Multi.CoreSubtitle">默认路线会自动下载官方发行包（国内镜像优先），无需手动填写地址。</sys:String>
     <sys:String x:Key="String.Multi.StatusUnknown">状态未知</sys:String>
     <sys:String x:Key="String.Multi.NotInstalled">未安装</sys:String>
     <sys:String x:Key="String.Multi.Installed">已安装</sys:String>
@@ -947,21 +947,21 @@
     <sys:String x:Key="String.Multi.Configure">配置</sys:String>
     <sys:String x:Key="String.Multi.Installing">正在安装…</sys:String>
     <sys:String x:Key="String.Multi.ConfirmUninstall">确定要删除联机核心吗？已加入的房间会断开。</sys:String>
-    <sys:String x:Key="String.Multi.ConfigureHint">填写你自己的联机核心下载地址（可自建镜像）。安装后会校验 SHA-256。</sys:String>
+    <sys:String x:Key="String.Multi.ConfigureHint">默认路线开箱即用。这里可以覆盖下载地址、版本与校验和，添加自定义公共节点，或复用 HMCL 已下载的核心。校验和使用 SHA-512（也兼容旧的 SHA-256）。</sys:String>
     <sys:String x:Key="String.Multi.PackageUrl">核心包下载地址</sys:String>
-    <sys:String x:Key="String.Multi.Checksum">SHA-256 校验和（选填，大写）</sys:String>
-    <sys:String x:Key="String.Multi.VerifyChecksum">安装时校验 SHA-256</sys:String>
-    <sys:String x:Key="String.Multi.LocalOnlyNote">仅限局域网：其他人需要在同一个局域网里，用你给的邀请码和地址才能加入。</sys:String>
+    <sys:String x:Key="String.Multi.Checksum">SHA-512 校验和（选填）</sys:String>
+    <sys:String x:Key="String.Multi.VerifyChecksum">安装时校验校验和</sys:String>
+    <sys:String x:Key="String.Multi.LocalOnlyNote">联机基于 P2P，稳定性不如服务器中继；适合朋友之间临时联机，不能替代 Minecraft 服务器。</sys:String>
     <sys:String x:Key="String.Multi.ActionTitle">开始</sys:String>
     <sys:String x:Key="String.Multi.ActionSubtitle">创建和加入是两个独立页面，不会堆在一起。</sys:String>
     <sys:String x:Key="String.Multi.CreateRoom">创建房间</sys:String>
-    <sys:String x:Key="String.Multi.CreateRoomHint">房主先启动一个 MC 实例，我们会监听日志，自动检测“本地对局域网开放”的 IP 和端口，也可以手动填写。</sys:String>
+    <sys:String x:Key="String.Multi.CreateRoomHint">房主启动实例并在游戏里「对局域网开放」，陶瓦会生成可与 HMCL 互通的邀请码。</sys:String>
     <sys:String x:Key="String.Multi.GoCreate">创建房间</sys:String>
     <sys:String x:Key="String.Multi.JoinRoom">加入房间</sys:String>
-    <sys:String x:Key="String.Multi.JoinRoomHint">输入朋友的邀请码，拿到房主共享的地址；下方选择一个实例，一键启动并自动进入房间。</sys:String>
+    <sys:String x:Key="String.Multi.JoinRoomHint">粘贴 HMCL / PCL CE / LPML 的邀请码即可加入，无需知道对方 IP。</sys:String>
     <sys:String x:Key="String.Multi.GoJoin">加入房间</sys:String>
     <sys:String x:Key="String.Multi.StepLaunch">先启动一个 MC 实例</sys:String>
-    <sys:String x:Key="String.Multi.StepLaunchHint">启动游戏后，请在游戏里按 Esc → 对局域网开放，记下端口；这里会自动检测。</sys:String>
+    <sys:String x:Key="String.Multi.StepLaunchHint">启动游戏后，请在游戏里按 Esc →「对局域网开放」，陶瓦会自动扫描端口。</sys:String>
     <sys:String x:Key="String.Multi.SelectInstance">选择实例</sys:String>
     <sys:String x:Key="String.Multi.LaunchGame">启动游戏</sys:String>
     <sys:String x:Key="String.Multi.InstanceHint">版本 {0} · {1}</sys:String>
@@ -969,19 +969,19 @@
     <sys:String x:Key="String.Multi.NoInstance">还没有实例，请先到“游戏”页新建。</sys:String>
     <sys:String x:Key="String.Multi.Launching">正在启动…</sys:String>
     <sys:String x:Key="String.Multi.LaunchSuccess">已启动：{0}</sys:String>
-    <sys:String x:Key="String.Multi.DetectingPort">正在监听游戏日志，请在游戏里“对局域网开放”……</sys:String>
+    <sys:String x:Key="String.Multi.DetectingPort">正在监听游戏日志；也可以在游戏里按 Esc →「对局域网开放」……</sys:String>
     <sys:String x:Key="String.Multi.PortDetected">已检测到：{0}</sys:String>
-    <sys:String x:Key="String.Multi.StepAddress">填写局域网共享地址</sys:String>
-    <sys:String x:Key="String.Multi.StepAddressHint">把上面检测到的“IP:端口”填进来，端口只填数字也可以；然后生成房间号，把房间号和这个地址一起发给朋友。</sys:String>
+    <sys:String x:Key="String.Multi.StepAddress">创建房间</sys:String>
+    <sys:String x:Key="String.Multi.StepAddressHint">先在左边启动实例，并在游戏里按 Esc →「对局域网开放」；陶瓦会自动扫描端口。点下面按钮创建房间。</sys:String>
     <sys:String x:Key="String.Multi.LocalShareIp">局域网 IP:端口</sys:String>
     <sys:String x:Key="String.Multi.Port">端口</sys:String>
     <sys:String x:Key="String.Multi.FillDetected">填入检测到的</sys:String>
     <sys:String x:Key="String.Multi.UseManual">手动输入（不自动检测）</sys:String>
-    <sys:String x:Key="String.Multi.GenerateRoom">生成房间号</sys:String>
-    <sys:String x:Key="String.Multi.RoomCodeLabel">房间号（告诉朋友）</sys:String>
-    <sys:String x:Key="String.Multi.RoomShareHint">把房间号和上面的地址一起发给朋友；朋友在“加入房间”里输入房间号即可。</sys:String>
+    <sys:String x:Key="String.Multi.GenerateRoom">创建房间</sys:String>
+    <sys:String x:Key="String.Multi.RoomCodeLabel">邀请码（发给朋友）</sys:String>
+    <sys:String x:Key="String.Multi.RoomShareHint">把邀请码发给朋友；对方在 HMCL / PCL CE / LPML 的「加入房间」里输入即可。</sys:String>
     <sys:String x:Key="String.Multi.RoomAddress">房主共享地址：{0}</sys:String>
-    <sys:String x:Key="String.Multi.Err.NoPackageUrl">没有填写联机核心下载地址，请点“配置”填写。</sys:String>
+    <sys:String x:Key="String.Multi.Err.NoPackageUrl">没有可用的下载地址。</sys:String>
     <sys:String x:Key="String.Multi.Err.InstallFailed">安装失败：{0}</sys:String>
     <sys:String x:Key="String.Multi.Err.ChecksumFailed">校验失败</sys:String>
     <sys:String x:Key="String.Multi.Err.ChecksumMismatch">SHA-256 不一致：{0} ≠ {1}</sys:String>
@@ -993,16 +993,16 @@
     <sys:String x:Key="String.Multi.Err.LaunchFailedDetail">游戏启动失败：{0}</sys:String>
     <sys:String x:Key="String.Multi.Back">返回</sys:String>
     <sys:String x:Key="String.Multi.EnterCode">输入邀请码</sys:String>
-    <sys:String x:Key="String.Multi.EnterCodeHint">邀请码是你朋友给的 8 位字母数字。输入后点“加入房间”，会解析出房主共享的地址。</sys:String>
-    <sys:String x:Key="String.Multi.CodeNeedResolve">输入邀请码后点“加入房间”</sys:String>
-    <sys:String x:Key="String.Multi.Resolving">正在解析邀请码…</sys:String>
-    <sys:String x:Key="String.Multi.Resolved">已解析到房主地址：{0}</sys:String>
-    <sys:String x:Key="String.Multi.Err.CodeInvalid">邀请码应为 8 位字母数字。</sys:String>
-    <sys:String x:Key="String.Multi.Err.ResolveFailed">无法解析邀请码，请检查地址是否已保存，或手动选实例、到多人游戏里直连。</sys:String>
-    <sys:String x:Key="String.Multi.Err.ResolveDetail">解析失败：{0}</sys:String>
+    <sys:String x:Key="String.Multi.EnterCodeHint">粘贴朋友给的邀请码（U/XXXX-XXXX-XXXX-XXXX），HMCL / PCL CE 生成的码可以直接用。</sys:String>
+    <sys:String x:Key="String.Multi.CodeNeedResolve">输入邀请码后点「加入房间」</sys:String>
+    <sys:String x:Key="String.Multi.Resolving">正在加入房间…</sys:String>
+    <sys:String x:Key="String.Multi.Resolved">已加入房间：{0}</sys:String>
+    <sys:String x:Key="String.Multi.Err.CodeInvalid">邀请码格式不对，应为 U/XXXX-XXXX-XXXX-XXXX。</sys:String>
+    <sys:String x:Key="String.Multi.Err.ResolveFailed">加入失败，请检查邀请码与网络。</sys:String>
+    <sys:String x:Key="String.Multi.Err.ResolveDetail">加入失败：{0}</sys:String>
     <sys:String x:Key="String.Multi.OneClickEnter">一键进入房间</sys:String>
     <sys:String x:Key="String.Multi.OneClickHint">选好实例后点“启动游戏”，启动器会自动连到房主的地址。</sys:String>
-    <sys:String x:Key="String.Multi.OneClickNoticePending">请先输入并解析邀请码，再启动游戏。</sys:String>
+    <sys:String x:Key="String.Multi.OneClickNoticePending">请先输入邀请码并加入房间，再启动游戏。</sys:String>
     <sys:String x:Key="String.Multi.OneClickNoticeReady">启动后将自动直连：{0}</sys:String>
     <sys:String x:Key="String.Multi.JoinLaunched">已启动实例：{0}，正在连接房间……</sys:String>
     <sys:String x:Key="String.Multi.ConfirmLeave">房间正处于“{0}”状态，退出会关闭房间。确定退出吗？</sys:String>
@@ -1455,5 +1455,49 @@
     <sys:String x:Key="String.Cli.CmdMpStatus">联机组件：{0} · 上次房间 {1} · 模式 {2}</sys:String>
     <sys:String x:Key="String.Cli.CmdAgreementReplay">用户协议（版本 {0}）：</sys:String>
     <sys:String x:Key="String.Cli.CmdDisclaimer">完整免责声明：{0}</sys:String>
-    <sys:String x:Key="String.Cli.CmdAbout">LPML 1.0.0 · 界面语言 {0}&#x0A;第三方、非官方 Minecraft Java 版启动器，与 Mojang / Microsoft 无关联。&#x0A;源代码、界面文案与文档主要由 AI 辅助生成，按「现状」提供，风险自担。&#x0A;协议版本 {1} · 完整免责声明见 DISCLAIMER.md</sys:String>
+    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · 界面语言 {0}&#x0A;第三方、非官方 Minecraft Java 版启动器，与 Mojang / Microsoft 无关联。&#x0A;源代码、界面文案与文档主要由 AI 辅助生成，按「现状」提供，风险自担。&#x0A;协议版本 {1} · 完整免责声明见 DISCLAIMER.md</sys:String>
+    <sys:String x:Key="String.Multi.Copyright">Terracotta | 陶瓦联机 © Burning_TNT 及贡献者 · AGPL-3.0-or-later（含例外条款）；基于 EasyTier。本启动器通过本地 HTTP API 与未经修改的官方程序交互。</sys:String>
+    <sys:String x:Key="String.Multi.HmclCompat">邀请码与 HMCL / PCL CE / FCL 使用同一套 U/XXXX-XXXX-XXXX-XXXX 码制，可以直接互连。</sys:String>
+    <sys:String x:Key="String.Multi.HmclNotice">HMCL 官方多人联机页面当前标注为「维护状态」；能否连通取决于对方版本与网络，本启动器不保证互通成功率。</sys:String>
+    <sys:String x:Key="String.Multi.DefaultRoute">默认路线：v{0} · {1} · 国内镜像优先</sys:String>
+    <sys:String x:Key="String.Multi.DefaultRouteHint">无需手动配置，点「下载联机核心」即可启用；也可以在「配置」里换成自己的地址。</sys:String>
+    <sys:String x:Key="String.Multi.StateWaiting">待机</sys:String>
+    <sys:String x:Key="String.Multi.StateHostScanning">正在扫描本机 Minecraft 端口…</sys:String>
+    <sys:String x:Key="String.Multi.StateHostStarting">正在创建房间…</sys:String>
+    <sys:String x:Key="String.Multi.StateHostOk">房间已就绪，把邀请码发给朋友</sys:String>
+    <sys:String x:Key="String.Multi.StateGuestConnecting">正在连接房间…</sys:String>
+    <sys:String x:Key="String.Multi.StateGuestStarting">正在建立连接…</sys:String>
+    <sys:String x:Key="String.Multi.StateGuestOk">已加入房间</sys:String>
+    <sys:String x:Key="String.Multi.StateException">联机核心报错：{0}</sys:String>
+    <sys:String x:Key="String.Multi.StateUnknown">状态未知</sys:String>
+    <sys:String x:Key="String.Multi.RoomCodeFormat">邀请码格式：U/XXXX-XXXX-XXXX-XXXX（可直接从 HMCL / PCL CE 复制）</sys:String>
+    <sys:String x:Key="String.Multi.FixedRoomCode">固定邀请码（选填）</sys:String>
+    <sys:String x:Key="String.Multi.FixedRoomCodeHint">留空则由陶瓦每次生成；填写须符合 U/XXXX-XXXX-XXXX-XXXX。</sys:String>
+    <sys:String x:Key="String.Multi.PlayerName">房间内显示名</sys:String>
+    <sys:String x:Key="String.Multi.VersionOverride">版本覆盖（选填）</sys:String>
+    <sys:String x:Key="String.Multi.ExternalCorePath">复用 HMCL 核心目录（选填）</sys:String>
+    <sys:String x:Key="String.Multi.ExternalCorePathHint">填 HMCL 已下载 terracotta 二进制的目录，LPML 会直接复用，不再重复下载。</sys:String>
+    <sys:String x:Key="String.Multi.CustomNodes">自定义公共节点</sys:String>
+    <sys:String x:Key="String.Multi.CustomNodesHint">每行一个 EasyTier 节点地址（v0.4.2 起支持），会与内置公共节点合并；留空即用默认路线。</sys:String>
+    <sys:String x:Key="String.Multi.OnlineMetadata">尝试读取 HMCL 同款版本元数据</sys:String>
+    <sys:String x:Key="String.Multi.Creating">正在创建房间…</sys:String>
+    <sys:String x:Key="String.Multi.CreatedHint">房间已创建。请在游戏里按 Esc →「对局域网开放」，陶瓦会自动扫描端口。</sys:String>
+    <sys:String x:Key="String.Multi.Joining">正在加入房间…</sys:String>
+    <sys:String x:Key="String.Multi.JoinOk">已加入。启动游戏后在「多人游戏」里连接：{0}</sys:String>
+    <sys:String x:Key="String.Multi.JoinOkNoUrl">已加入。启动游戏后到「多人游戏」里找「陶瓦联机大厅」，或双击列表里的房间。</sys:String>
+    <sys:String x:Key="String.Multi.Err.CodeRejected">陶瓦核心拒绝了这个邀请码，请检查是否复制完整、是否与对方版本一致。</sys:String>
+    <sys:String x:Key="String.Multi.Err.NotRunning">联机核心还没启动，请先点「下载联机核心」。</sys:String>
+    <sys:String x:Key="String.Multi.Err.AllSourcesFailed">所有下载源都失败了，请在「配置」里填自己的地址。</sys:String>
+    <sys:String x:Key="String.Multi.Err.NoExecutableInPackage">发行包里没有找到可执行文件。</sys:String>
+    <sys:String x:Key="String.Multi.Err.PortNotFound">没能连上联机核心的本地服务（端口发现超时）。</sys:String>
+    <sys:String x:Key="String.Multi.Err.DaemonStartFailed">联机核心启动失败。</sys:String>
+    <sys:String x:Key="String.Multi.Err.ApiFailed">联机核心返回错误（HTTP {0}）。</sys:String>
+    <sys:String x:Key="String.Multi.TryingSource">正在尝试下载源：{0}</sys:String>
+    <sys:String x:Key="String.Multi.SourceFailed">下载源不可用：{0}</sys:String>
+    <sys:String x:Key="String.Multi.SourceTimeout">连接超时，换下一个源</sys:String>
+    <sys:String x:Key="String.Multi.MetadataLoaded">已读取联机核心版本元数据：v{0}</sys:String>
+    <sys:String x:Key="String.Multi.MetadataFailed">元数据读取失败（不影响默认路线）：{0}</sys:String>
+    <sys:String x:Key="String.Multi.ReusedHmclCore">已复用 HMCL 的联机核心：{0}</sys:String>
+    <sys:String x:Key="String.Multi.InstalledFrom">联机核心 v{0} 安装完成（来源：{1}）</sys:String>
+    <sys:String x:Key="String.Multi.ChecksumWarning">邀请码校验位看起来不对，仍会尝试加入，请确认没有抄错。</sys:String>
 </ResourceDictionary>

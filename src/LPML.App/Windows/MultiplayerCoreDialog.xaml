@@ -1,22 +1,49 @@
 <Window x:Class="LPML.App.Windows.MultiplayerCoreDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{DynamicResource String.Multi.Configure}" Width="520" SizeToContent="Height"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" 
+        Title="{DynamicResource String.Multi.Configure}" Width="560" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         FontFamily="{DynamicResource Font.Ui}">
     <StackPanel Margin="22">
         <TextBlock Text="{DynamicResource String.Multi.CoreTitle}" Style="{StaticResource Text.Subtitle}" Margin="0,0,0,4"/>
         <TextBlock Text="{DynamicResource String.Multi.ConfigureHint}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,14"/>
 
+        <!-- 默认路线可完全覆盖 -->
         <TextBlock Text="{DynamicResource String.Multi.PackageUrl}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
-        <TextBox x:Name="UrlBox" Margin="0,0,0,14"/>
+        <TextBox x:Name="UrlBox" Margin="0,0,0,12"/>
+
+        <TextBlock Text="{DynamicResource String.Multi.VersionOverride}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+        <TextBox x:Name="VersionBox" Margin="0,0,0,12"/>
 
         <TextBlock Text="{DynamicResource String.Multi.Checksum}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
         <TextBox x:Name="ChecksumBox" Margin="0,0,0,10"/>
-        <CheckBox x:Name="VerifyCheck" Content="{DynamicResource String.Multi.VerifyChecksum}" IsChecked="True" Margin="0,0,0,16"/>
+        <CheckBox x:Name="VerifyCheck" Content="{DynamicResource String.Multi.VerifyChecksum}" IsChecked="True" Margin="0,0,0,12"/>
 
-        <Border Padding="12" CornerRadius="{DynamicResource Radius.Small}" Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,0,16">
-            <TextBlock Text="{DynamicResource String.Multi.LocalOnlyNote}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap"/>
+        <CheckBox x:Name="MetadataCheck" Content="{DynamicResource String.Multi.OnlineMetadata}" IsChecked="True" Margin="0,0,0,16"/>
+
+        <!-- 兼容 HMCL：复用它已下载的同一份官方二进制 -->
+        <TextBlock Text="{DynamicResource String.Multi.ExternalCorePath}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+        <TextBox x:Name="ExternalBox" Margin="0,0,0,4"/>
+        <TextBlock Text="{DynamicResource String.Multi.ExternalCorePathHint}" Style="{StaticResource Text.Caption}"
+                   Foreground="{DynamicResource Brush.ForegroundMuted}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+        <!-- v0.4.2 起支持自定义公共节点 -->
+        <TextBlock Text="{DynamicResource String.Multi.CustomNodes}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+        <TextBox x:Name="NodesBox" AcceptsReturn="True" Height="62" VerticalScrollBarVisibility="Auto" Margin="0,0,0,4"/>
+        <TextBlock Text="{DynamicResource String.Multi.CustomNodesHint}" Style="{StaticResource Text.Caption}"
+                   Foreground="{DynamicResource Brush.ForegroundMuted}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+        <TextBlock Text="{DynamicResource String.Multi.FixedRoomCode}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+        <TextBox x:Name="FixedCodeBox" Margin="0,0,0,4"/>
+        <TextBlock Text="{DynamicResource String.Multi.FixedRoomCodeHint}" Style="{StaticResource Text.Caption}"
+                   Foreground="{DynamicResource Brush.ForegroundMuted}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+        <TextBlock Text="{DynamicResource String.Multi.PlayerName}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+        <TextBox x:Name="PlayerBox" Margin="0,0,0,16"/>
+
+        <Border Padding="12" CornerRadius="{DynamicResource Radius.Small}" Background="{DynamicResource Brush.Card}"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,0,16">
+            <TextBlock Text="{DynamicResource String.Multi.Copyright}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap"/>
         </Border>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

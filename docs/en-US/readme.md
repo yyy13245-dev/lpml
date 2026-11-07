@@ -1,4 +1,4 @@
-# LPML — Let's Play Minecraft Launcher
+﻿# LPML — Let's Play Minecraft Launcher
 
 A Minecraft Java Edition launcher built with **.NET 10 + WPF**: a clean interface with features tucked
 into a hierarchical menu, customisation on par with PCL / HMCL, multi-threaded segmented downloads with
@@ -55,7 +55,7 @@ This repository contains no game files, account credentials or binary releases. 
 - **Strings live in language packs**: `src/LPML.App/Locales/*.xaml`, zero hard-coded UI text
 - XAML uses `{DynamicResource String.Module.Item}`; C# uses `Lang.T` / `Lang.F`; Core uses `L.T` / `L.F`
 - **Switch at runtime**: Settings → Advanced → Language, applies instantly with no restart
-- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1331 entries each, keys 1:1
+- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1374 entries each, keys 1:1
 - Key format `String.<Module>.<Item>`, e.g. `String.Settings.Title`
 - To add a language: copy `zh-CN.xaml`, translate the values, add one entry to `LauncherLanguage`
 
@@ -172,6 +172,18 @@ Because it is a direct child, Windows Task Manager groups both LPML entries toge
 - **Settings → Advanced**: enable guard / unresponsive threshold / force close without asking (requires restart).
 - CLI: `--no-guard`, `--guard-timeout=30`, `--guard-auto-kill`.
 
+### Multiplayer (Terracotta / EasyTier)
+
+P2P multiplayer powered by [Terracotta](https://burningtnt.github.io/Terracotta/) and [EasyTier](https://easytier.cn/), working out of the box:
+
+- **Default route**: clicking "Download core" fetches the official v0.4.2 bundle, CN mirrors first (Gitee → CNB → mirror → GitHub). Version metadata is read from the same `terracotta.json` HMCL uses; if unavailable, built-in templates and a verified SHA-512 take over.
+- **Official integration**: the unmodified official binary is launched with `--hmcl` and listens on `127.0.0.1` only. The OS-assigned port is discovered via `terracotta.lock` (2-byte big-endian), a port JSON file, or process output. All actions use the local HTTP API: `/state`, `/state/scanning`, `/state/guesting`, `/state/ide`, `/meta`, `/log`, `/panic?peaceful=true`.
+- **HMCL compatible**: invitation codes use the same `U/XXXX-XXXX-XXXX-XXXX` format (base-34, no I/O), so HMCL / PCL CE / FCL codes work directly. You can also point Settings at HMCL's downloaded core folder to reuse the same binary.
+- **Your own config is kept**: override URL, version and checksum (SHA-512, legacy SHA-256 accepted); v0.4.2 supports custom EasyTier public nodes (one per line, merged with built-ins); fixed invitation code and display name are optional.
+- **Note**: P2P is less reliable than relayed servers and is meant for playing with friends, not as a replacement for a Minecraft Java Edition server. HMCL's official multiplayer page is currently marked "under maintenance"; cross-launcher connectivity is not guaranteed.
+
+> **Copyright**: Terracotta © Burning_TNT and contributors, licensed **AGPL-3.0-or-later (with exception)**; built on EasyTier. LPML does not link Terracotta code — it talks to the unmodified official binary over its local HTTP API and shows the copyright notice prominently in the multiplayer UI.
+
 ### Other
 - Mod management: reads `fabric.mod.json` / `mods.toml` / `mcmod.info`, toggle (`.jar.disabled`), delete, add
 - Modpack import: Modrinth `.mrpack`, HMCL / MultiMC / Curse exports, plus **Modrinth online search**
@@ -193,7 +205,7 @@ src/
 │  ├─ Core/ Config/ Mirror/ Download/ Game/ Java/ Auth/ Launch/
 │  ├─ Instances/ Mods/ Integration/ Utils/
 └─ LPML.App/             # WPF UI (net10.0-windows)
-   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1331 entries each)
+   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1374 entries each)
    ├─ Views/             # 18 pages (incl. task center, version install, modpack install, mod download, docs)
    ├─ Windows/ Utils/ Services/ Themes/ Styles/ Helpers/ Controls/
 docs/                    # Built-in documents (zh-CN / en-US)

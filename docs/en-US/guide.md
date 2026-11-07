@@ -1,4 +1,4 @@
-# LPML User Guide
+﻿# LPML User Guide
 
 **LPML = Let's Play Minecraft Launcher**
 
@@ -332,6 +332,19 @@ To disable it: **Settings → Advanced → Enable log guard process** (takes eff
 7. Running several launchers at once shares one `lpml.log`, so their entries get mixed
 
 ---
+
+## Appendix: Multiplayer (Terracotta / EasyTier)
+
+1. Open "Multiplayer" in the sidebar and click "Download core". The default route fetches the official v0.4.2 bundle automatically (CN mirrors first); no URL needed.
+2. **Host**: open "Create room", launch an instance, then press Esc → "Open to LAN" in game. Click "Create room" and share the invitation code once it appears.
+3. **Guest**: open "Join room", paste the code (`U/XXXX-XXXX-XXXX-XXXX`) and click "Join room". Once joined, launch the game and double-click the "Terracotta lobby" in the Multiplayer list.
+4. Codes are compatible with HMCL / PCL CE / FCL. HMCL's official multiplayer page is currently marked "under maintenance"; connectivity depends on the other version and network.
+5. Under "Settings" you can override the download URL and version, add custom public nodes (one per line), or point at HMCL's downloaded core folder to reuse the same binary.
+
+P2P is less reliable than relayed servers. It is meant for playing with friends, not as a replacement for a Minecraft Java Edition server.
+
+> Terracotta © Burning_TNT and contributors · AGPL-3.0-or-later (with exception); built on EasyTier.
+> LPML talks to the unmodified official binary over its local HTTP API and shows the copyright notice in the UI.
 
 ## Disclaimer
 

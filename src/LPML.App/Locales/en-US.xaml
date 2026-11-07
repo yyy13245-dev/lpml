@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML en-US 语言包 · English -->
-    <!-- 词条 1331 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1374 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">Preparing…</sys:String>
@@ -17,7 +17,7 @@
     <!-- About -->
     <sys:String x:Key="String.About.Title">About LPML</sys:String>
     <sys:String x:Key="String.About.Subtitle">A lightweight, portable and customizable Minecraft launcher</sys:String>
-    <sys:String x:Key="String.About.Version">Version 1.0.0 · .NET 10 + WPF</sys:String>
+    <sys:String x:Key="String.About.Version">Version 0.0.001 · .NET 10 + WPF</sys:String>
     <sys:String x:Key="String.About.PortableTitle">Portability promise</sys:String>
     <sys:String x:Key="String.About.DataLocation">Data locations</sys:String>
     <sys:String x:Key="String.About.RootDir">Root directory</sys:String>
@@ -934,10 +934,10 @@ Put the jars you download into:
     <sys:String x:Key="String.Core.Log.Modpack.BlockedPaths">Blocked {0} archive entries that escaped the instance directory (possible Zip Slip).</sys:String>
 
     <!-- ══ 联机（局域网） ══ -->
-    <sys:String x:Key="String.Multi.Title">Multiplayer (LAN)</sys:String>
-    <sys:String x:Key="String.Multi.Subtitle">Play with friends on the same LAN. No Internet access, no tunnel.</sys:String>
+    <sys:String x:Key="String.Multi.Title">Multiplayer</sys:String>
+    <sys:String x:Key="String.Multi.Subtitle">P2P multiplayer powered by Terracotta / EasyTier; interoperable with HMCL, PCL CE and other launchers.</sys:String>
     <sys:String x:Key="String.Multi.CoreTitle">Multiplayer core</sys:String>
-    <sys:String x:Key="String.Multi.CoreSubtitle">The core program is placed in LPML\tools\terracotta and ships with the launcher. Fill in its download address to install.</sys:String>
+    <sys:String x:Key="String.Multi.CoreSubtitle">The default route downloads the official bundle automatically (CN mirrors first); no manual URL needed.</sys:String>
     <sys:String x:Key="String.Multi.StatusUnknown">Unknown</sys:String>
     <sys:String x:Key="String.Multi.NotInstalled">Not installed</sys:String>
     <sys:String x:Key="String.Multi.Installed">Installed</sys:String>
@@ -947,21 +947,21 @@ Put the jars you download into:
     <sys:String x:Key="String.Multi.Configure">Configure</sys:String>
     <sys:String x:Key="String.Multi.Installing">Installing…</sys:String>
     <sys:String x:Key="String.Multi.ConfirmUninstall">Uninstall the core? Active rooms will be disconnected.</sys:String>
-    <sys:String x:Key="String.Multi.ConfigureHint">Enter your own download address (self-hosted mirror allowed). SHA-256 is verified after install.</sys:String>
+    <sys:String x:Key="String.Multi.ConfigureHint">Works out of the box. Override the download URL, version and checksum, add custom public nodes, or reuse HMCL's installed core here. Checksums are SHA-512 (legacy SHA-256 also accepted).</sys:String>
     <sys:String x:Key="String.Multi.PackageUrl">Core package URL</sys:String>
-    <sys:String x:Key="String.Multi.Checksum">SHA-256 checksum (optional, uppercase)</sys:String>
-    <sys:String x:Key="String.Multi.VerifyChecksum">Verify SHA-256 on install</sys:String>
-    <sys:String x:Key="String.Multi.LocalOnlyNote">LAN only: others must be on the same LAN and use your code and address to join.</sys:String>
+    <sys:String x:Key="String.Multi.Checksum">SHA-512 checksum (optional)</sys:String>
+    <sys:String x:Key="String.Multi.VerifyChecksum">Verify checksum on install</sys:String>
+    <sys:String x:Key="String.Multi.LocalOnlyNote">P2P based, less reliable than relayed servers. Meant for playing with friends, not a replacement for a Minecraft server.</sys:String>
     <sys:String x:Key="String.Multi.ActionTitle">Get started</sys:String>
     <sys:String x:Key="String.Multi.ActionSubtitle">Create and join are separate pages, never stacked.</sys:String>
     <sys:String x:Key="String.Multi.CreateRoom">Create room</sys:String>
-    <sys:String x:Key="String.Multi.CreateRoomHint">The host starts a MC instance first. We watch the log to detect the LAN world IP and port automatically, or you can type them.</sys:String>
+    <sys:String x:Key="String.Multi.CreateRoomHint">The host launches a game and opens it to LAN; Terracotta generates an HMCL-compatible invitation code.</sys:String>
     <sys:String x:Key="String.Multi.GoCreate">Create room</sys:String>
     <sys:String x:Key="String.Multi.JoinRoom">Join room</sys:String>
-    <sys:String x:Key="String.Multi.JoinRoomHint">Enter your friend's code to get the host's shared address, then pick an instance to launch and join in one click.</sys:String>
+    <sys:String x:Key="String.Multi.JoinRoomHint">Paste a code from HMCL / PCL CE / LPML; no need to know the host's IP.</sys:String>
     <sys:String x:Key="String.Multi.GoJoin">Join room</sys:String>
     <sys:String x:Key="String.Multi.StepLaunch">1. Start a MC instance</sys:String>
-    <sys:String x:Key="String.Multi.StepLaunchHint">Start the game, then press Esc, then Open to LAN in-game and note the port; it is detected automatically.</sys:String>
+    <sys:String x:Key="String.Multi.StepLaunchHint">After launching, press Esc → "Open to LAN" in game; Terracotta scans the port for you.</sys:String>
     <sys:String x:Key="String.Multi.SelectInstance">Select instance</sys:String>
     <sys:String x:Key="String.Multi.LaunchGame">Launch game</sys:String>
     <sys:String x:Key="String.Multi.InstanceHint">Version {0} · {1}</sys:String>
@@ -969,19 +969,19 @@ Put the jars you download into:
     <sys:String x:Key="String.Multi.NoInstance">No instances yet. Create one on the Game page first.</sys:String>
     <sys:String x:Key="String.Multi.Launching">Launching…</sys:String>
     <sys:String x:Key="String.Multi.LaunchSuccess">Launched: {0}</sys:String>
-    <sys:String x:Key="String.Multi.DetectingPort">Watching game log, please Open to LAN in-game…</sys:String>
+    <sys:String x:Key="String.Multi.DetectingPort">Watching the game log; you can also press Esc → "Open to LAN" in game…</sys:String>
     <sys:String x:Key="String.Multi.PortDetected">Detected: {0}</sys:String>
-    <sys:String x:Key="String.Multi.StepAddress">2. Fill in the LAN shared address</sys:String>
-    <sys:String x:Key="String.Multi.StepAddressHint">Fill in the detected IP:port above (the port number alone is fine), then generate a room code and send both to your friend.</sys:String>
+    <sys:String x:Key="String.Multi.StepAddress">Create the room</sys:String>
+    <sys:String x:Key="String.Multi.StepAddressHint">Launch an instance on the left, then press Esc → "Open to LAN" in game; Terracotta scans the port automatically. Press the button below.</sys:String>
     <sys:String x:Key="String.Multi.LocalShareIp">LAN IP:port</sys:String>
     <sys:String x:Key="String.Multi.Port">Port</sys:String>
     <sys:String x:Key="String.Multi.FillDetected">Fill detected</sys:String>
     <sys:String x:Key="String.Multi.UseManual">Manual input (no auto-detect)</sys:String>
-    <sys:String x:Key="String.Multi.GenerateRoom">Generate room code</sys:String>
-    <sys:String x:Key="String.Multi.RoomCodeLabel">Room code (tell your friend)</sys:String>
-    <sys:String x:Key="String.Multi.RoomShareHint">Send the code and the address above to your friend; they enter the code on Join room.</sys:String>
+    <sys:String x:Key="String.Multi.GenerateRoom">Create room</sys:String>
+    <sys:String x:Key="String.Multi.RoomCodeLabel">Invitation code (share this)</sys:String>
+    <sys:String x:Key="String.Multi.RoomShareHint">Share this code; friends enter it under "Join room" in HMCL / PCL CE / LPML.</sys:String>
     <sys:String x:Key="String.Multi.RoomAddress">Host shared address: {0}</sys:String>
-    <sys:String x:Key="String.Multi.Err.NoPackageUrl">No core download URL set. Click Configure to add one.</sys:String>
+    <sys:String x:Key="String.Multi.Err.NoPackageUrl">No download URL available.</sys:String>
     <sys:String x:Key="String.Multi.Err.InstallFailed">Installation failed: {0}</sys:String>
     <sys:String x:Key="String.Multi.Err.ChecksumFailed">Verification failed</sys:String>
     <sys:String x:Key="String.Multi.Err.ChecksumMismatch">SHA-256 mismatch: {0} != {1}</sys:String>
@@ -993,18 +993,18 @@ Put the jars you download into:
     <sys:String x:Key="String.Multi.Err.LaunchFailedDetail">Game failed to start: {0}</sys:String>
     <sys:String x:Key="String.Multi.Back">Back</sys:String>
     <sys:String x:Key="String.Multi.EnterCode">Enter invite code</sys:String>
-    <sys:String x:Key="String.Multi.EnterCodeHint">The code is the 8-letter/digit code from your friend. Click Join room to resolve the host address.</sys:String>
-    <sys:String x:Key="String.Multi.CodeNeedResolve">Enter the code, then click Join room</sys:String>
-    <sys:String x:Key="String.Multi.Resolving">Resolving code…</sys:String>
-    <sys:String x:Key="String.Multi.Resolved">Resolved host address: {0}</sys:String>
-    <sys:String x:Key="String.Multi.Err.CodeInvalid">The code must be 8 letters/digits.</sys:String>
-    <sys:String x:Key="String.Multi.Err.ResolveFailed">Cannot resolve the code. Check whether the address is saved, or pick an instance and connect directly in Multiplayer.</sys:String>
-    <sys:String x:Key="String.Multi.Err.ResolveDetail">Resolve failed: {0}</sys:String>
+    <sys:String x:Key="String.Multi.EnterCodeHint">Paste the invitation code (U/XXXX-XXXX-XXXX-XXXX). Codes from HMCL / PCL CE work directly.</sys:String>
+    <sys:String x:Key="String.Multi.CodeNeedResolve">Enter the code and press "Join room"</sys:String>
+    <sys:String x:Key="String.Multi.Resolving">Joining room…</sys:String>
+    <sys:String x:Key="String.Multi.Resolved">Joined room: {0}</sys:String>
+    <sys:String x:Key="String.Multi.Err.CodeInvalid">Invalid code. Expected U/XXXX-XXXX-XXXX-XXXX.</sys:String>
+    <sys:String x:Key="String.Multi.Err.ResolveFailed">Failed to join. Check the code and your network.</sys:String>
+    <sys:String x:Key="String.Multi.Err.ResolveDetail">Join failed: {0}</sys:String>
     <sys:String x:Key="String.Multi.OneClickEnter">One-click join</sys:String>
     <sys:String x:Key="String.Multi.OneClickHint">Pick an instance and click Launch game; the launcher auto-connects to the host address.</sys:String>
-    <sys:String x:Key="String.Multi.OneClickNoticePending">Enter and resolve a code first.</sys:String>
-    <sys:String x:Key="String.Multi.OneClickNoticeReady">Will auto-connect to: {0} after launch</sys:String>
-    <sys:String x:Key="String.Multi.JoinLaunched">Launched instance: {0}, connecting to room…</sys:String>
+    <sys:String x:Key="String.Multi.OneClickNoticePending">Enter the code and join before launching the game.</sys:String>
+    <sys:String x:Key="String.Multi.OneClickNoticeReady">Will connect automatically on launch: {0}</sys:String>
+    <sys:String x:Key="String.Multi.JoinLaunched">Launched instance: {0}, connecting…</sys:String>
     <sys:String x:Key="String.Multi.ConfirmLeave">The room is currently {0}. Leaving closes it. Leave anyway?</sys:String>
     <sys:String x:Key="String.Multi.Copied">Copied to clipboard</sys:String>
     <sys:String x:Key="String.Multi.DaemonExited">Multiplayer core exited (code {0}).</sys:String>
@@ -1455,5 +1455,49 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Cli.CmdMpStatus">Multiplayer core: {0} · last room {1} · mode {2}</sys:String>
     <sys:String x:Key="String.Cli.CmdAgreementReplay">User agreement (version {0}):</sys:String>
     <sys:String x:Key="String.Cli.CmdDisclaimer">Full disclaimer: {0}</sys:String>
-    <sys:String x:Key="String.Cli.CmdAbout">LPML 1.0.0 · language {0}&#x0A;A third-party, unofficial Minecraft Java Edition launcher, not affiliated with Mojang or Microsoft.&#x0A;Source, UI text and docs are mostly AI-assisted, provided "as is"; use at your own risk.&#x0A;Agreement version {1} · full disclaimer in DISCLAIMER.md</sys:String>
+    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · language {0}&#x0A;A third-party, unofficial Minecraft Java Edition launcher, not affiliated with Mojang or Microsoft.&#x0A;Source, UI text and docs are mostly AI-assisted, provided "as is"; use at your own risk.&#x0A;Agreement version {1} · full disclaimer in DISCLAIMER.md</sys:String>
+    <sys:String x:Key="String.Multi.Copyright">Terracotta © Burning_TNT and contributors · AGPL-3.0-or-later (with exception); built on EasyTier. LPML talks to the unmodified official binary over its local HTTP API.</sys:String>
+    <sys:String x:Key="String.Multi.HmclCompat">Invitation codes use the same U/XXXX-XXXX-XXXX-XXXX format as HMCL / PCL CE / FCL, so they can join each other directly.</sys:String>
+    <sys:String x:Key="String.Multi.HmclNotice">HMCL's official multiplayer page is currently marked "under maintenance". Connectivity depends on the other launcher version and network; interoperability is not guaranteed.</sys:String>
+    <sys:String x:Key="String.Multi.DefaultRoute">Default route: v{0} · {1} · CN mirrors first</sys:String>
+    <sys:String x:Key="String.Multi.DefaultRouteHint">No setup needed — click "Download core". You can override it in Settings.</sys:String>
+    <sys:String x:Key="String.Multi.StateWaiting">Idle</sys:String>
+    <sys:String x:Key="String.Multi.StateHostScanning">Scanning local Minecraft ports…</sys:String>
+    <sys:String x:Key="String.Multi.StateHostStarting">Creating room…</sys:String>
+    <sys:String x:Key="String.Multi.StateHostOk">Room ready — share the invitation code</sys:String>
+    <sys:String x:Key="String.Multi.StateGuestConnecting">Connecting to room…</sys:String>
+    <sys:String x:Key="String.Multi.StateGuestStarting">Establishing connection…</sys:String>
+    <sys:String x:Key="String.Multi.StateGuestOk">Joined room</sys:String>
+    <sys:String x:Key="String.Multi.StateException">Terracotta error: {0}</sys:String>
+    <sys:String x:Key="String.Multi.StateUnknown">Status unknown</sys:String>
+    <sys:String x:Key="String.Multi.RoomCodeFormat">Code format: U/XXXX-XXXX-XXXX-XXXX (can be copied from HMCL / PCL CE)</sys:String>
+    <sys:String x:Key="String.Multi.FixedRoomCode">Fixed invitation code (optional)</sys:String>
+    <sys:String x:Key="String.Multi.FixedRoomCodeHint">Leave blank to let Terracotta generate one; otherwise use U/XXXX-XXXX-XXXX-XXXX.</sys:String>
+    <sys:String x:Key="String.Multi.PlayerName">Display name in room</sys:String>
+    <sys:String x:Key="String.Multi.VersionOverride">Version override (optional)</sys:String>
+    <sys:String x:Key="String.Multi.ExternalCorePath">Reuse HMCL core directory (optional)</sys:String>
+    <sys:String x:Key="String.Multi.ExternalCorePathHint">Point to the folder where HMCL downloaded the Terracotta binary; LPML reuses it instead of downloading again.</sys:String>
+    <sys:String x:Key="String.Multi.CustomNodes">Custom public nodes</sys:String>
+    <sys:String x:Key="String.Multi.CustomNodesHint">One EasyTier node per line (supported since v0.4.2), merged with built-in nodes; leave blank for the default route.</sys:String>
+    <sys:String x:Key="String.Multi.OnlineMetadata">Try loading HMCL-compatible version metadata</sys:String>
+    <sys:String x:Key="String.Multi.Creating">Creating room…</sys:String>
+    <sys:String x:Key="String.Multi.CreatedHint">Room created. Press Esc → "Open to LAN" in game; Terracotta scans the port automatically.</sys:String>
+    <sys:String x:Key="String.Multi.Joining">Joining room…</sys:String>
+    <sys:String x:Key="String.Multi.JoinOk">Joined. After launching, connect in Multiplayer to: {0}</sys:String>
+    <sys:String x:Key="String.Multi.JoinOkNoUrl">Joined. After launching, look for the "Terracotta lobby" in the Multiplayer list.</sys:String>
+    <sys:String x:Key="String.Multi.Err.CodeRejected">Terracotta rejected this code. Check that you copied it fully and that versions match.</sys:String>
+    <sys:String x:Key="String.Multi.Err.NotRunning">Terracotta is not running. Click "Download core" first.</sys:String>
+    <sys:String x:Key="String.Multi.Err.AllSourcesFailed">All download sources failed. Enter your own URL in Settings.</sys:String>
+    <sys:String x:Key="String.Multi.Err.NoExecutableInPackage">No executable found in the package.</sys:String>
+    <sys:String x:Key="String.Multi.Err.PortNotFound">Could not reach Terracotta's local service (port discovery timed out).</sys:String>
+    <sys:String x:Key="String.Multi.Err.DaemonStartFailed">Failed to start Terracotta.</sys:String>
+    <sys:String x:Key="String.Multi.Err.ApiFailed">Terracotta returned an error (HTTP {0}).</sys:String>
+    <sys:String x:Key="String.Multi.TryingSource">Trying download source: {0}</sys:String>
+    <sys:String x:Key="String.Multi.SourceFailed">Download source unavailable: {0}</sys:String>
+    <sys:String x:Key="String.Multi.SourceTimeout">Connection timed out, trying next source</sys:String>
+    <sys:String x:Key="String.Multi.MetadataLoaded">Loaded Terracotta metadata: v{0}</sys:String>
+    <sys:String x:Key="String.Multi.MetadataFailed">Metadata unavailable (default route still works): {0}</sys:String>
+    <sys:String x:Key="String.Multi.ReusedHmclCore">Reused HMCL's Terracotta binary: {0}</sys:String>
+    <sys:String x:Key="String.Multi.InstalledFrom">Terracotta v{0} installed (source: {1})</sys:String>
+    <sys:String x:Key="String.Multi.ChecksumWarning">The code checksum looks wrong; the join will still be attempted, please double-check it.</sys:String>
 </ResourceDictionary>

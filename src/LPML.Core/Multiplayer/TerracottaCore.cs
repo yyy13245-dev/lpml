@@ -1,26 +1,33 @@
 using System.Diagnostics;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-using LPML.Core.Utils;
 using LPML.Core.Download;
+using LPML.Core.Utils;
 
 namespace LPML.Core.Multiplayer;
 
 /// <summary>
-/// 联机核心（Core 层）：陶瓦 / EasyTier 组网。
-/// 只依赖 BCL + HttpService，不引用任何 WPF 类型，可在纯逻辑测试里直接驱动。
+/// 联机核心（Core 层）：陶瓦联机 Terracotta / EasyTier。
 ///
-/// 设计原则：
-///  1) 联机核心作为独立可执行文件放在 &lt;root&gt;\LPML\tools\terracotta\（随启动器一起发布），
-///     本类只负责下载、校验、拉起子进程、解析它的 stdout，不在 LPML 内静态链接任何陶瓦代码；
-///  2) 房间号是本地生成的随机码（8 位字母数字），仅用于人传人，网络侧是否要邀请码由陶瓦决定；
-///  3) 本类不内置任何官方下载地址：工具包地址由设置里的「联机核心地址」给出（可自建镜像），留空则不允许下载。
+/// 与 v0.4.2 官方集成方式一致（HMCL 同款）：
+///  1) 下载未经修改的官方发行包（默认路线），解压出可执行文件放到
+///     &lt;root&gt;\LPML\tools\terracotta\；本类不静态/动态链接任何陶瓦代码；
+///  2) 以 <c>--hmcl</c> 集成模式拉起子进程，HTTP 服务只监听 127.0.0.1，
+///     端口由系统随机分配，通过 terracotta.lock / 端口 JSON / stdout 发现；
+///  3) 全部操作走本地 REST API：/state、/state/scanning、/state/guesting、
+///     /state/ide、/meta、/log、/panic?peaceful=true；
+///  4) 邀请码使用官方 U/NNNN-NNNN-SSSS-SSSS 码制，因此与 HMCL / PCL CE / FCL 互通。
+///
+/// 版权：Terracotta | 陶瓦联机 © Burning_TNT 及贡献者，AGPL-3.0-or-later（含例外条款）。
+/// 本启动器通过进程间通信接口与未经修改的官方程序交互，界面上有明显版权标注。
 /// </summary>
 public sealed class TerracottaCore : IDisposable
 {
-    private const string DefaultNetworkName = "lpml-net";
-    private const string DefaultNetworkSecret = "lpml-shared";
-    private static readonly char[] RoomChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
+    private static readonly Regex PortInJson = new(@"""port""\s*:\s*(\d{2,5})", RegexOptions.Compiled);
+    private static readonly Regex PortInText = new(@"\bport\s*[:=]\s*(\d{2,5})\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private readonly AppPaths _paths;
     private readonly HttpService _http;
@@ -30,65 +37,76 @@ public sealed class TerracottaCore : IDisposable
     private Process? _daemon;
     private readonly StringBuilder _daemonOutput = new();
     private readonly List<TerracottaPeer> _peers = new();
+    private readonly HttpClient _api = new() { Timeout = TimeSpan.FromSeconds(3) };
+    private CancellationTokenSource? _pollCts;
+    private int _apiPort;
+    private long _lastStateIndex = -1;
     private bool _disposed;
 
     /// <summary>联机核心目录：&lt;root&gt;\LPML\tools\terracotta。</summary>
     public string ToolDirectory => Path.Combine(_paths.AppDirectory, "tools", "terracotta");
 
-    /// <summary>可执行文件路径（按当前操作系统选名字，是否真实存在以 IsInstalled 为准）。</summary>
+    /// <summary>可执行文件路径（安装后由默认路线落盘）。</summary>
     public string ExecutablePath
     {
         get
         {
             var fileName = OperatingSystem.IsWindows()
                 ? "terracotta.exe"
-                : OperatingSystem.IsOSPlatform("osx")
-                    ? "terracotta-macos"
-                    : "terracotta-linux";
+                : OperatingSystem.IsMacOS() ? "terracotta-macos" : "terracotta-linux";
             return Path.Combine(ToolDirectory, fileName);
         }
     }
 
-    /// <summary>当前是否已安装（可执行文件存在，且 SHA-256 校验通过或未要求校验）。</summary>
+    /// <summary>当前是否已安装（可执行文件存在，且校验通过或未要求校验）。</summary>
     public bool IsInstalled
     {
         get
         {
             if (!File.Exists(ExecutablePath)) return false;
             if (!_settings.VerifyChecksum || string.IsNullOrWhiteSpace(_settings.ExpectedChecksum)) return true;
-            try { return HashHelper.Sha256(ExecutablePath).Equals(_settings.ExpectedChecksum, StringComparison.OrdinalIgnoreCase); }
+            try
+            {
+                var actual = _settings.ExpectedChecksum.Trim().Length == 64
+                    ? HashHelper.Sha256(ExecutablePath)
+                    : Sha512Of(ExecutablePath);
+                return actual.Equals(_settings.ExpectedChecksum.Trim(), StringComparison.OrdinalIgnoreCase);
+            }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }
         }
     }
 
-    /// <summary>当前核心版本号（由设置保存，安装时写入）。</summary>
     public string InstalledVersion => _settings.InstalledVersion;
 
-    /// <summary>守护进程是否还在运行。</summary>
     public bool IsRunning
     {
-        get
-        {
-            lock (_sync)
-                return _daemon is not null && !_daemon.HasExited;
-        }
+        get { lock (_sync) return _daemon is not null && !_daemon.HasExited; }
     }
 
-    /// <summary>本机虚拟 IP（守护进程上报后更新）。</summary>
+    /// <summary>本机 HTTP API 端口（0 = 尚未发现）。</summary>
+    public int ApiPort => _apiPort;
+
+    /// <summary>陶瓦上报的当前邀请码（host-starting 及以上状态）。</summary>
+    public string? RoomCode { get; private set; }
+
+    /// <summary>加入成功后可用的地址（guest-ok 的 url 字段）。</summary>
+    public string? GuestUrl { get; private set; }
+
+    /// <summary>当前房间状态。</summary>
+    public TerracottaStateKind StateKind { get; private set; } = TerracottaStateKind.Waiting;
+
     public string? VirtualIp { get; private set; }
 
-    /// <summary>当前已知的对端列表（不含自己）。</summary>
     public IReadOnlyList<TerracottaPeer> Peers
     {
         get { lock (_sync) return _peers.ToList(); }
     }
 
-    /// <summary>房间状态变化：安装状态、运行状态、虚拟 IP、对端列表。</summary>
     public event EventHandler<TerracottaStatus>? StatusChanged;
-
-    /// <summary>守护进程输出一行（含陶瓦自身的日志）。</summary>
     public event EventHandler<string>? OutputLine;
+    public event EventHandler<string>? RoomCodeChanged;
+    public event EventHandler<TerracottaStateSnapshot>? StateUpdated;
 
     public TerracottaCore(AppPaths paths, HttpService http, TerracottaSettings settings)
     {
@@ -100,193 +118,108 @@ public sealed class TerracottaCore : IDisposable
     // ── 安装 ────────────────────────────────────────────────
 
     /// <summary>
-    /// 下载并安装联机核心。
-    /// <paramref name="sourceUrl"/> 为空时使用设置里的地址；仍为空则抛出 InvalidOperationException。
-    /// 下载后用 <paramref name="expectedChecksum"/> 做 SHA-256 校验（空字符串 = 不校验）。
+    /// 安装联机核心。未指定下载地址时走默认路线（与 HMCL 相同的镜像与元数据）。
+    /// <paramref name="expectedChecksum"/> 支持 SHA-512（128 位）与旧配置的 SHA-256（64 位）。
     /// </summary>
     public async Task InstallAsync(string? sourceUrl = null, string? expectedChecksum = null,
         IProgress<DownloadAggregate>? progress = null, CancellationToken token = default)
     {
-        var url = sourceUrl?.Trim() ?? _settings.PackageUrl?.Trim() ?? "";
-        if (string.IsNullOrWhiteSpace(url))
-            throw new InvalidOperationException(L.T("String.Multi.Err.NoPackageUrl"));
+        if (IsRunning) Stop();
 
-        var target = ExecutablePath;
-        Directory.CreateDirectory(ToolDirectory);
-
-        // 报告“准备中”，让界面有响应
         progress?.Report(new DownloadAggregate
         {
-            Active = 1,
-            Total = 1,
-            ReceivedBytes = 0,
-            TotalBytes = 0,
-            BytesPerSecond = 0,
+            Active = 1, Total = 1, ReceivedBytes = 0, TotalBytes = 0, BytesPerSecond = 0
         });
 
-        var tmp = Path.Combine(_paths.TempDirectory, "terracotta_" + Guid.NewGuid().ToString("N")[..8] + ".bin");
-        Directory.CreateDirectory(Path.GetDirectoryName(tmp)!);
-        try
-        {
-            // 现有 HttpService.DownloadToFileAsync 不直接支持 IProgress<DownloadAggregate>，
-            // 这里用 (Received, Total) 元组进度桥接，并把 SHA-256 校验放到下载完成后做一次整体核对。
-            var bridge = new Progress<(long Received, long Total)>(tuple =>
-                progress?.Report(new DownloadAggregate
-                {
-                    Active = 1,
-                    Total = 1,
-                    ReceivedBytes = tuple.Received,
-                    TotalBytes = tuple.Total,
-                    BytesPerSecond = 0,
-                }));
-            await _http.DownloadToFileAsync(url, tmp, bridge, token).ConfigureAwait(false);
-
-            if (!string.IsNullOrWhiteSpace(expectedChecksum))
-            {
-                string actual;
-                try { actual = HashHelper.Sha256(tmp); }
-                catch (IOException ex) { throw new InvalidOperationException(L.T("String.Multi.Err.ChecksumFailed") + " " + ex.Message, ex); }
-
-                if (!actual.Equals(expectedChecksum, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException(L.F("String.Multi.Err.ChecksumMismatch", actual, expectedChecksum));
-            }
-
-            if (File.Exists(target))
-            {
-                try { File.Delete(target); }
-                catch (IOException) { }
-                catch (UnauthorizedAccessException) { }
-            }
-
-            // 原子替换：先写临时名，再移动，避免只写了一半的坏文件被当成“已安装”
-            var stage = target + ".part";
-            if (File.Exists(stage)) File.Delete(stage);
-            File.Move(tmp, stage);
-            File.Move(stage, target);
-
-            if (OperatingSystem.IsLinux() || OperatingSystem.IsOSPlatform("osx"))
-            {
-                try { File.SetUnixFileMode(target, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute); }
-                catch (IOException) { }
-                catch (UnauthorizedAccessException) { }
-            }
-
-            _settings.InstalledVersion = _settings.LatestKnownVersion ?? L.T("String.Multi.VersionUnknown");
-            _settings.ExpectedChecksum = expectedChecksum ?? "";
-            _settings.LastUpdatedAt = DateTimeOffset.Now;
-            SaveSettings();
-
+        var bridge = new Progress<(long Received, long Total)>(tuple =>
             progress?.Report(new DownloadAggregate
             {
-                Active = 0,
+                Active = 1,
                 Total = 1,
-                ReceivedBytes = 1,
-                TotalBytes = 1,
-                BytesPerSecond = 0,
-            });
-        }
-        finally
+                ReceivedBytes = tuple.Received,
+                TotalBytes = tuple.Total,
+                BytesPerSecond = 0
+            }));
+
+        var installer = new TerracottaPackage(_paths, _http, _settings)
         {
-            if (File.Exists(tmp))
+            Log = line =>
             {
-                try { File.Delete(tmp); }
-                catch (IOException) { }
-                catch (UnauthorizedAccessException) { }
+                OutputLine?.Invoke(this, line);
+                LPML.Core.Log.Info("Multi", line);
             }
-        }
+        };
+
+        var result = await installer.InstallAsync(sourceUrl, expectedChecksum, bridge, token).ConfigureAwait(false);
+        SaveSettings();
+
+        progress?.Report(new DownloadAggregate
+        {
+            Active = 0, Total = 1, ReceivedBytes = 1, TotalBytes = 1, BytesPerSecond = 0
+        });
+        RaiseStatus();
+        OutputLine?.Invoke(this, L.F("String.Multi.InstalledFrom", result.Version, result.SourceUrl));
     }
 
     /// <summary>卸载（只删除文件，不停止进程；调用方应先 Stop）。</summary>
     public void Uninstall()
     {
         if (IsRunning) Stop();
-        if (File.Exists(ExecutablePath))
+        foreach (var file in new[] { ExecutablePath, Path.Combine(ToolDirectory, "VCRUNTIME140.DLL") })
         {
-            try { File.Delete(ExecutablePath); }
+            if (!File.Exists(file)) continue;
+            try { File.Delete(file); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
         _settings.InstalledVersion = "";
         _settings.ExpectedChecksum = "";
         SaveSettings();
+        RaiseStatus();
+    }
+
+    /// <summary>读取 GET /meta，用于确认核心版本与平台。</summary>
+    public async Task<string> GetMetaAsync(CancellationToken token = default)
+    {
+        EnsurePort();
+        return await _api.GetStringAsync($"http://127.0.0.1:{_apiPort}/meta", token).ConfigureAwait(false);
     }
 
     // ── 房间号 ──────────────────────────────────────────────
 
-    /// <summary>生成本地房间号（8 位，去掉易混的 0/O/1/I）。</summary>
-    public static string NormalizeRoomCode(string? code)
-    {
-        var text = (code ?? "").Trim().ToUpperInvariant().Replace(" ", "").Replace("-", "");
-        return text.Length == 8 ? text : "";
-    }
+    /// <summary>归一化为官方 U/XXXX-XXXX-XXXX-XXXX 格式；格式不对返回空串。</summary>
+    public static string NormalizeRoomCode(string? code) => TerracottaRoomCode.Normalize(code);
 
+    /// <summary>生成官方格式的邀请码（用于固定房间码）。</summary>
+    public static string GenerateOfficialRoomCode() => TerracottaRoomCode.Generate();
+
+    /// <summary>
+    /// 本地 8 位短码（旧版遗留，只用于「人传人」的备注，不参与陶瓦组网）。
+    /// 保留是为了兼容旧配置与已有调用；新流程一律使用 GenerateOfficialRoomCode。
+    /// </summary>
     public static string GenerateRoomCode()
     {
-        var random = new Random();
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         var buffer = new char[8];
-        for (var i = 0; i < buffer.Length; i++)
-            buffer[i] = RoomChars[random.Next(RoomChars.Length)];
+        for (var i = 0; i < buffer.Length; i++) buffer[i] = chars[Random.Shared.Next(chars.Length)];
         return new string(buffer);
     }
 
-    // ── 守护进程：创建 / 加入 ───────────────────────────────
+    // ── 守护进程 ────────────────────────────────────────────
 
-    /// <summary>启动组网守护进程（加入房间）。创建房间同样用本方法：<paramref name="port"/> 填 0 表示自动分配。</summary>
+    /// <summary>
+    /// 启动集成模式守护进程（<c>--hmcl</c>）。
+    /// 兼容旧签名：roomCode 仅作为会话备注，port &lt;= 0 记为创建模式。
+    /// 真正的开房/加入请调用 CreateRoomAsync / JoinRoomAsync。
+    /// </summary>
     public TerracottaSession Start(string roomCode, string? bindAddr = null, int port = 0)
     {
         if (!IsInstalled) throw new InvalidOperationException(L.T("String.Multi.Err.NotInstalled"));
-        if (string.IsNullOrWhiteSpace(roomCode)) throw new ArgumentException(L.T("String.Multi.Err.RoomCodeEmpty"), nameof(roomCode));
+        if (string.IsNullOrWhiteSpace(roomCode))
+            throw new ArgumentException(L.T("String.Multi.Err.RoomCodeEmpty"), nameof(roomCode));
 
         Stop();
-
-        lock (_sync)
-        {
-            _daemonOutput.Clear();
-            _peers.Clear();
-            VirtualIp = null;
-        }
-
-        var startInfo = new ProcessStartInfo(ExecutablePath)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            WorkingDirectory = ToolDirectory
-        };
-
-        // 协议参数（与陶瓦 / EasyTier 对齐）：网络名 + 共享密钥由房间号派生，保证同房间的人拿到同一组参数。
-        // 注意：这是“防误连”而不是“加密”——局域网联机本就不走公网，不需要强鉴权。
-        startInfo.ArgumentList.Add("--network-name");
-        startInfo.ArgumentList.Add(DeriveNetworkName(roomCode));
-        startInfo.ArgumentList.Add("--network-secret");
-        startInfo.ArgumentList.Add(DeriveNetworkSecret(roomCode));
-        startInfo.ArgumentList.Add("--ipv4");
-        startInfo.ArgumentList.Add(OperatingSystem.IsWindows() ? "10.233.233.1" : "10.233.233.1");
-
-        if (!string.IsNullOrWhiteSpace(bindAddr))
-        {
-            startInfo.ArgumentList.Add("--bind-addr");
-            startInfo.ArgumentList.Add(bindAddr.Trim());
-        }
-
-        if (port > 0)
-        {
-            startInfo.ArgumentList.Add("--port");
-            startInfo.ArgumentList.Add(port.ToString());
-        }
-
-        var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        process.OutputDataReceived += (_, e) => { if (e.Data is not null) OnOutput(e.Data); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) OnOutput(e.Data); };
-        process.Exited += (_, _) => OnExited(process.ExitCode);
-
-        process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-
-        lock (_sync) _daemon = process;
+        EnsureDaemon();
 
         var session = new TerracottaSession
         {
@@ -301,52 +234,342 @@ public sealed class TerracottaCore : IDisposable
         return session;
     }
 
-    /// <summary>停止组网守护进程。</summary>
-    public void Stop()
+    /// <summary>确保守护进程在跑并已发现端口；已运行则直接复用。</summary>
+    public void EnsureDaemon()
     {
-        Process? target;
-        lock (_sync) { target = _daemon; _daemon = null; }
+        if (IsRunning && _apiPort > 0) return;
+        if (IsRunning) Stop();
+        if (!IsInstalled) throw new InvalidOperationException(L.T("String.Multi.Err.NotInstalled"));
 
-        if (target is null) return;
-
-        try
+        lock (_sync)
         {
-            // 先给一次优雅退出机会（多数组网工具收到空行/quit 即退出）
-            if (target.StartInfo.RedirectStandardInput && target.HasExited == false)
-            {
-                try { target.StandardInput.WriteLine("quit"); target.StandardInput.Flush(); }
-                catch (IOException) { }
-                target.WaitForExit(1500);
-            }
+            _daemonOutput.Clear();
+            _peers.Clear();
         }
-        catch (InvalidOperationException) { }
-
-        if (!target.HasExited)
-        {
-            try { target.Kill(true); }
-            catch (InvalidOperationException) { }
-            catch (System.ComponentModel.Win32Exception) { }
-        }
-
-        try { target.Dispose(); }
-        catch (InvalidOperationException) { }
-
-        lock (_sync) _peers.Clear();
+        _apiPort = 0;
+        _lastStateIndex = -1;
+        RoomCode = null;
+        GuestUrl = null;
+        StateKind = TerracottaStateKind.Waiting;
         VirtualIp = null;
+
+        var startInfo = new ProcessStartInfo(ExecutablePath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            WorkingDirectory = ToolDirectory
+        };
+        startInfo.ArgumentList.Add("--hmcl");
+
+        var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+        process.OutputDataReceived += (_, e) => { if (e.Data is not null) OnOutput(e.Data); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) OnOutput(e.Data); };
+        process.Exited += (_, _) => OnExited(process.ExitCode);
+
+        if (!process.Start())
+            throw new InvalidOperationException(L.T("String.Multi.Err.DaemonStartFailed"));
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        lock (_sync) _daemon = process;
+
+        _apiPort = WaitForPort(12_000);
+        if (_apiPort <= 0)
+        {
+            Stop();
+            throw new InvalidOperationException(L.T("String.Multi.Err.PortNotFound"));
+        }
+
+        StartPolling();
         RaiseStatus();
     }
+
+    /// <summary>
+    /// 创建房间（房主）。不传固定邀请码时由陶瓦生成，随后从 /state 的 room 字段读取。
+    /// </summary>
+    public async Task CreateRoomAsync(string? fixedRoomCode, string playerName,
+        CancellationToken token = default)
+    {
+        EnsureDaemon();
+        var normalized = TerracottaRoomCode.Normalize(fixedRoomCode);
+        if (!string.IsNullOrWhiteSpace(fixedRoomCode) && normalized.Length == 0)
+            throw new ArgumentException(L.T("String.Multi.Err.CodeInvalid"), nameof(fixedRoomCode));
+
+        var url = BuildStateUrl("scanning", normalized, playerName);
+        using var response = await _api.GetAsync(url, token).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException(L.F("String.Multi.Err.ApiFailed", (int)response.StatusCode));
+        StateKind = TerracottaStateKind.HostScanning;
+        RaiseStatus();
+    }
+
+    /// <summary>加入房间。邀请码使用官方 U/ 格式，与 HMCL / PCL CE / FCL 互通。</summary>
+    public async Task JoinRoomAsync(string roomCode, string playerName,
+        CancellationToken token = default)
+    {
+        var normalized = TerracottaRoomCode.Normalize(roomCode);
+        if (normalized.Length == 0)
+            throw new ArgumentException(L.T("String.Multi.Err.CodeInvalid"), nameof(roomCode));
+
+        EnsureDaemon();
+        var url = BuildStateUrl("guesting", normalized, playerName);
+        using var response = await _api.GetAsync(url, token).ConfigureAwait(false);
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            throw new InvalidOperationException(L.T("String.Multi.Err.CodeRejected"));
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException(L.F("String.Multi.Err.ApiFailed", (int)response.StatusCode));
+
+        _settings.LastRoomCode = normalized;
+        SaveSettings();
+        StateKind = TerracottaStateKind.GuestConnecting;
+        RaiseStatus();
+    }
+
+    /// <summary>回到待机状态（GET /state/ide，端点拼写来自官方 v0.4.2 文档）。</summary>
+    public async Task ResetAsync(CancellationToken token = default)
+    {
+        if (_apiPort <= 0) return;
+        try
+        {
+            using var response = await _api.GetAsync($"http://127.0.0.1:{_apiPort}/state/ide", token)
+                .ConfigureAwait(false);
+        }
+        catch (HttpRequestException) { }
+        RoomCode = null;
+        GuestUrl = null;
+        StateKind = TerracottaStateKind.Waiting;
+        RaiseStatus();
+    }
+
+    private string BuildStateUrl(string action, string room, string playerName)
+    {
+        var builder = new StringBuilder($"http://127.0.0.1:{_apiPort}/state/{action}");
+        var first = true;
+        void Add(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return;
+            builder.Append(first ? '?' : '&');
+            builder.Append(key).Append('=').Append(Uri.EscapeDataString(value));
+            first = false;
+        }
+        Add("room", room);
+        Add("player", string.IsNullOrWhiteSpace(playerName)
+            ? (_settings.PlayerName ?? "").Trim() : playerName.Trim());
+
+        // v0.4.2 支持自定义公共节点；可重复传，与内置节点合并。
+        foreach (var node in _settings.CustomPublicNodes ?? new List<string>())
+            Add("public_nodes", node);
+        return builder.ToString();
+    }
+
+    /// <summary>停止组网守护进程：先走官方优雅退出，再兜底结束进程树。</summary>
+    public void Stop()
+    {
+        _pollCts?.Cancel();
+        _pollCts = null;
+
+        if (_apiPort > 0)
+        {
+            try
+            {
+                _ = _api.GetAsync($"http://127.0.0.1:{_apiPort}/panic?peaceful=true");
+            }
+            catch (HttpRequestException) { }
+            catch (ObjectDisposedException) { }
+        }
+
+        Process? target;
+        lock (_sync) { target = _daemon; _daemon = null; }
+        _apiPort = 0;
+
+        if (target is not null)
+        {
+            try
+            {
+                if (!target.HasExited)
+                {
+                    try { target.StandardInput.WriteLine("quit"); target.StandardInput.Flush(); }
+                    catch (IOException) { }
+                    if (!target.WaitForExit(1200)) target.Kill(true);
+                }
+            }
+            catch (InvalidOperationException) { }
+            catch (System.ComponentModel.Win32Exception) { }
+            try { target.Dispose(); }
+            catch (InvalidOperationException) { }
+        }
+
+        lock (_sync) _peers.Clear();
+        RoomCode = null;
+        GuestUrl = null;
+        VirtualIp = null;
+        StateKind = TerracottaStateKind.Waiting;
+        RaiseStatus();
+    }
+
+    // ── 端口发现 ────────────────────────────────────────────
+
+    /// <summary>
+    /// 端口由系统随机分配，官方提供三种发现方式，这里全部兼容：
+    ///  ① 数据目录下含 {"port":N} 的 JSON（先 .tmp 再改名，读到的一定完整）
+    ///  ② terracotta.lock：2 字节大端端口
+    ///  ③ 进程 stdout 里的 port 提示
+    /// 找到后用 TCP 连一次回环确认可用，避免误读残留文件。
+    /// </summary>
+    private int WaitForPort(int timeoutMs)
+    {
+        var dataDir = TerracottaPlatform.DataDirectory();
+        var deadline = Environment.TickCount64 + timeoutMs;
+
+        while (Environment.TickCount64 < deadline)
+        {
+            foreach (var candidate in DiscoverPorts(dataDir))
+            {
+                if (candidate is > 0 and < 65536 && IsLoopbackOpen(candidate)) return candidate;
+            }
+            if (!IsRunning) break;
+            Thread.Sleep(120);
+        }
+        return 0;
+    }
+
+    private List<int> DiscoverPorts(string dataDir)
+    {
+        // 不用 yield：带 catch 的 try 块里不允许 yield（CS1626），改为先收集再返回。
+        var result = new List<int>();
+
+        // ② 锁文件：2 字节大端
+        try
+        {
+            var lockPath = TerracottaPlatform.LockFilePath;
+            if (File.Exists(lockPath))
+            {
+                var bytes = File.ReadAllBytes(lockPath);
+                if (bytes.Length >= 2) result.Add((bytes[0] << 8) | bytes[1]);
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+
+        // ① 端口 JSON（文件名由官方决定，扫描数据目录里的小文件即可）
+        try
+        {
+            if (Directory.Exists(dataDir))
+            {
+                foreach (var file in Directory.EnumerateFiles(dataDir))
+                {
+                    if (file.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) continue;
+                    var info = new FileInfo(file);
+                    if (info.Length is <= 0 or > 4096) continue;
+                    var text = File.ReadAllText(file);
+                    var match = PortInJson.Match(text);
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out var port)) result.Add(port);
+                }
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+
+        // ③ stdout
+        string captured;
+        lock (_sync) captured = _daemonOutput.ToString();
+        foreach (Match match in PortInJson.Matches(captured))
+            if (int.TryParse(match.Groups[1].Value, out var p)) result.Add(p);
+        foreach (Match match in PortInText.Matches(captured))
+            if (int.TryParse(match.Groups[1].Value, out var p)) result.Add(p);
+
+        return result;
+    }
+
+    private static bool IsLoopbackOpen(int port)
+    {
+        try
+        {
+            using var client = new TcpClient();
+            var task = client.ConnectAsync("127.0.0.1", port);
+            return task.Wait(TimeSpan.FromMilliseconds(250)) && client.Connected;
+        }
+        catch (SocketException) { return false; }
+        catch (AggregateException) { return false; }
+    }
+
+    private void EnsurePort()
+    {
+        if (_apiPort <= 0)
+            throw new InvalidOperationException(L.T("String.Multi.Err.NotRunning"));
+    }
+
+    // ── 状态轮询 ────────────────────────────────────────────
+
+    private void StartPolling()
+    {
+        var cts = new CancellationTokenSource();
+        _pollCts = cts;
+        var port = _apiPort;
+        _ = Task.Run(async () =>
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                try
+                {
+                    var json = await _api.GetStringAsync($"http://127.0.0.1:{port}/state", cts.Token)
+                        .ConfigureAwait(false);
+                    var snapshot = TerracottaStateParser.Parse(json);
+                    ApplyState(snapshot);
+                }
+                catch (OperationCanceledException) { break; }
+                catch (HttpRequestException) { /* 核心正在启动，下一轮再试 */ }
+                catch (ObjectDisposedException) { break; }
+                try { await Task.Delay(500, cts.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) { break; }
+            }
+        }, cts.Token);
+    }
+
+    private void ApplyState(TerracottaStateSnapshot snapshot)
+    {
+        // index 单调递增；忽略重复响应，避免重复刷新界面。
+        if (snapshot.Index > 0 && snapshot.Index <= _lastStateIndex) return;
+        if (snapshot.Index > 0) _lastStateIndex = snapshot.Index;
+
+        StateKind = snapshot.Kind;
+        if (!string.IsNullOrWhiteSpace(snapshot.RoomCode) && snapshot.RoomCode != RoomCode)
+        {
+            RoomCode = snapshot.RoomCode;
+            _settings.LastRoomCode = RoomCode;
+            SaveSettings();
+            RoomCodeChanged?.Invoke(this, RoomCode);
+        }
+        if (!string.IsNullOrWhiteSpace(snapshot.Url)) GuestUrl = snapshot.Url;
+
+        if (snapshot.Profiles.Count > 0)
+        {
+            lock (_sync)
+            {
+                _peers.Clear();
+                foreach (var p in snapshot.Profiles)
+                    _peers.Add(new TerracottaPeer
+                    {
+                        Ip = "", PublicKey = p.MachineId, ConnectedAt = DateTimeOffset.Now,
+                        Raw = $"{p.Name} · {p.Vendor} · {p.Kind}"
+                    });
+            }
+        }
+
+        StateUpdated?.Invoke(this, snapshot);
+        RaiseStatus();
+    }
+
+    // ── 进程输出 ────────────────────────────────────────────
 
     private void OnOutput(string line)
     {
         lock (_sync) _daemonOutput.AppendLine(line);
         OutputLine?.Invoke(this, line);
 
-        if (TryParseVirtualIp(line, out var ip))
-        {
-            VirtualIp = ip;
-            RaiseStatus();
-        }
-
+        if (TryParseVirtualIp(line, out var ip)) { VirtualIp = ip; RaiseStatus(); }
         var peer = TryParsePeer(line);
         if (peer is not null)
         {
@@ -361,11 +584,13 @@ public sealed class TerracottaCore : IDisposable
 
     private void OnExited(int exitCode)
     {
-        lock (_sync)
-        {
-            if (ReferenceEquals(_daemon, null) == false) _daemon = null;
-        }
+        lock (_sync) _daemon = null;
+        _apiPort = 0;
+        _pollCts?.Cancel();
         VirtualIp = null;
+        RoomCode = null;
+        GuestUrl = null;
+        StateKind = TerracottaStateKind.Waiting;
         lock (_sync) _peers.Clear();
         RaiseStatus();
         OutputLine?.Invoke(this, L.F("String.Multi.DaemonExited", exitCode));
@@ -386,38 +611,23 @@ public sealed class TerracottaCore : IDisposable
         StatusChanged?.Invoke(this, snapshot);
     }
 
-    // ── 行解析（可被单测直接调用） ──────────────────────────
+    // ── 行解析（保留，供单测与日志兼容） ─────────────────────
 
-    /// <summary>从一行输出里尝试解析虚拟 IP（ipconfig / ifconfig 风格 + 工具自定义格式）。</summary>
     public static bool TryParseVirtualIp(string line, out string ip)
     {
         ip = "";
-
-        // 常见输出：tun0: inet 10.233.233.1  netmask 255.255.255.0
-        var match = System.Text.RegularExpressions.Regex.Match(line, @"inet\s+(\d{1,3}(?:\.\d{1,3}){3})");
-        if (match.Success)
-        {
-            var candidate = match.Groups[1].Value;
-            if (IsPrivateOrVirtual(candidate))
-            {
-                ip = candidate;
-                return true;
-            }
-        }
-
-        // 工具自定义：VIRTUAL_IP=10.233.233.1 或 virtual ip: 10.233.233.1
-        match = System.Text.RegularExpressions.Regex.Match(line, @"(?:virtual[_\s]?ip|vip)\s*[:=]\s*(\d{1,3}(?:\.\d{1,3}){3})",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (match.Success)
+        var match = Regex.Match(line, @"inet\s+(\d{1,3}(?:\.\d{1,3}){3})");
+        if (match.Success && IsPrivateOrVirtual(match.Groups[1].Value))
         {
             ip = match.Groups[1].Value;
             return true;
         }
-
+        match = Regex.Match(line, @"(?:virtual[_\s]?ip|vip)\s*[:=]\s*(\d{1,3}(?:\.\d{1,3}){3})",
+            RegexOptions.IgnoreCase);
+        if (match.Success) { ip = match.Groups[1].Value; return true; }
         return false;
     }
 
-    /// <summary>从一行输出里尝试解析对端信息（没有标准格式，这里只认常见的 peer / node 行）。</summary>
     public static TerracottaPeer? TryParsePeer(string line)
     {
         var trimmed = line.Trim();
@@ -427,19 +637,15 @@ public sealed class TerracottaCore : IDisposable
             !trimmed.Contains("client", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        var ipMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"(\d{1,3}(?:\.\d{1,3}){3})");
-        if (!ipMatch.Success) return null;
+        var ipMatch = Regex.Match(trimmed, @"(\d{1,3}(?:\.\d{1,3}){3})");
+        if (!ipMatch.Success || !IsPrivateOrVirtual(ipMatch.Groups[1].Value)) return null;
 
         var ip = ipMatch.Groups[1].Value;
-        if (!IsPrivateOrVirtual(ip)) return null;
-
-        var keyMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"([0-9a-fA-F]{16,64})");
-        var publicKey = keyMatch.Success ? keyMatch.Groups[1].Value : ip;
-
+        var keyMatch = Regex.Match(trimmed, @"([0-9a-fA-F]{16,64})");
         return new TerracottaPeer
         {
             Ip = ip,
-            PublicKey = publicKey,
+            PublicKey = keyMatch.Success ? keyMatch.Groups[1].Value : ip,
             ConnectedAt = DateTimeOffset.Now,
             Raw = trimmed
         };
@@ -451,8 +657,6 @@ public sealed class TerracottaCore : IDisposable
         var parts = ip.Split('.');
         if (parts.Length != 4) return false;
         if (!int.TryParse(parts[0], out var a) || !int.TryParse(parts[1], out var b)) return false;
-
-        // 10.x.x.x / 172.16-31.x.x / 192.168.x.x / 169.254.x.x（link-local）/ 127.x.x.x
         return a == 10 ||
                (a == 172 && b is >= 16 and <= 31) ||
                (a == 192 && b == 168) ||
@@ -460,17 +664,11 @@ public sealed class TerracottaCore : IDisposable
                a == 127;
     }
 
-    private static string DeriveNetworkName(string roomCode)
-        => DefaultNetworkName + "-" + roomCode.Trim().ToUpperInvariant();
-
-    private static string DeriveNetworkSecret(string roomCode)
+    private static string Sha512Of(string path)
     {
-        // 房间号本身只是人传人用的短码，把它做一次哈希再截断，避免把明文当密钥写进日志。
-        var hash = HashHelper.Sha256(DefaultNetworkSecret + ":" + roomCode.Trim().ToUpperInvariant());
-        return hash.Length > 32 ? hash[..32] : hash;
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(System.Security.Cryptography.SHA512.HashData(stream));
     }
-
-    // ── 持久化 ──────────────────────────────────────────────
 
     private void SaveSettings()
     {
@@ -479,13 +677,12 @@ public sealed class TerracottaCore : IDisposable
         catch (UnauthorizedAccessException) { }
     }
 
-    // ── IDisposable ─────────────────────────────────────────
-
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
         Stop();
+        _api.Dispose();
     }
 }
 
@@ -501,10 +698,7 @@ public sealed record TerracottaSession
 
 public enum TerracottaSessionMode
 {
-    /// <summary>创建房间：本机作为首个节点，端口自动分配。</summary>
     Create,
-
-    /// <summary>加入房间：连接到已有节点。</summary>
     Join
 }
 
@@ -528,33 +722,47 @@ public sealed record TerracottaPeer
 /// <summary>联机核心的设置（随 launcher.json 持久化）。</summary>
 public sealed class TerracottaSettings
 {
-    /// <summary>联机核心包下载地址（用户填写，可自建镜像；留空则禁止下载）。</summary>
+    /// <summary>联机核心包下载地址（留空 = 走默认路线；可自建镜像或填模板）。</summary>
     public string PackageUrl { get; set; } = "";
+
+    /// <summary>版本覆盖（留空 = 用在线元数据的 version_latest，再回退内置 0.4.2）。</summary>
+    public string VersionOverride { get; set; } = "";
+
+    /// <summary>是否尝试拉取 HMCL 同款 terracotta.json 元数据（默认开；失败自动回退内置）。</summary>
+    public bool UseOnlineMetadata { get; set; } = true;
+
+    /// <summary>复用 HMCL 已下载的核心目录（填目录路径；留空 = 自己下载）。</summary>
+    public string? ExternalCorePath { get; set; }
+
+    /// <summary>附加的 EasyTier 公共节点（v0.4.2 起支持，可重复，与内置节点合并）。</summary>
+    public List<string> CustomPublicNodes { get; set; } = new();
+
+    /// <summary>房间成员列表里显示的名字（留空则由界面传当前账户名）。</summary>
+    public string PlayerName { get; set; } = "";
+
+    /// <summary>固定房间码（留空 = 每次由陶瓦生成）。须为 U/XXXX-XXXX-XXXX-XXXX。</summary>
+    public string FixedRoomCode { get; set; } = "";
 
     /// <summary>已安装的核心版本号。</summary>
     public string InstalledVersion { get; set; } = "";
 
-    /// <summary>安装包预期 SHA-256（空 = 不校验）。</summary>
+    /// <summary>安装包预期校验和（SHA-512，兼容旧的 SHA-256）。空 = 不校验。</summary>
     public string ExpectedChecksum { get; set; } = "";
 
-    /// <summary>是否校验 SHA-256（默认开）。</summary>
+    /// <summary>是否校验校验和（默认开）。</summary>
     public bool VerifyChecksum { get; set; } = true;
 
-    /// <summary>已知最新版本号（由界面从服务端查询后回填）。</summary>
     public string? LatestKnownVersion { get; set; }
-
-    /// <summary>上次更新时间。</summary>
     public DateTimeOffset LastUpdatedAt { get; set; }
 
-    /// <summary>上次使用的房间号（不自动回显给用户，仅用于“恢复会话”提示）。</summary>
+    /// <summary>上次使用的邀请码。</summary>
     public string LastRoomCode { get; set; } = "";
 
-    /// <summary>邀请码 → 房主共享地址（本机保存，不联网传播）。</summary>
+    /// <summary>旧版：邀请码 → 房主共享地址（保留兼容，新流程不再依赖）。</summary>
     public Dictionary<string, string> KnownRooms { get; set; } = new();
 
-    /// <summary>自建 / 私有的邀请码发现服务地址；留空则只使用本机已保存的映射。{code} 会被替换为邀请码。</summary>
+    /// <summary>旧版：自建发现服务地址（保留兼容）。</summary>
     public string? DiscoveryUrl { get; set; }
 
-    /// <summary>上次会话模式。</summary>
     public TerracottaSessionMode LastMode { get; set; } = TerracottaSessionMode.Join;
 }

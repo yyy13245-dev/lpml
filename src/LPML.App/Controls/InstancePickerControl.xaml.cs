@@ -63,7 +63,6 @@ public sealed partial class InstancePickerControl : UserControl
         InstanceCombo.ItemsSource = null;
         _list.AddRange(_ctx.Instances.Instances);
         InstanceCombo.ItemsSource = _list;
-        InstanceCombo.DisplayMemberPath = "Name";
 
         GameInstance? selected = null;
         if (!string.IsNullOrWhiteSpace(_ctx.Settings.SelectedInstanceId))

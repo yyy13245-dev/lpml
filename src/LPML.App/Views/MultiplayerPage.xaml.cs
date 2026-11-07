@@ -30,6 +30,7 @@ public sealed partial class MultiplayerPage : UserControl, IRefreshablePage
         _installProgress = new Progress<DownloadAggregate>(OnInstallProgress);
         InitializeComponent();
         Loaded += OnLoaded;
+        _core.StateUpdated += (_, _) => Dispatcher.InvokeAsync(Refresh);
     }
 
     private MainWindow? Host => Application.Current.MainWindow as MainWindow;
@@ -46,12 +47,30 @@ public sealed partial class MultiplayerPage : UserControl, IRefreshablePage
         CoreDot.Background = installed ? AccentBrush() : MutedBrush();
         CoreStatusText.Text = installed ? Lang.T("String.Multi.Installed") : Lang.T("String.Multi.NotInstalled");
         CoreVersionText.Text = installed && !string.IsNullOrEmpty(_core.InstalledVersion)
-            ? Lang.F("String.Multi.VersionFormat", _core.InstalledVersion)
+            ? Lang.F("String.Multi.VersionFormat", _core.InstalledVersion) +
+              (_core.IsRunning ? " · " + StateText() : "")
             : "";
         CoreActionButton.Content = installed
             ? Lang.T("String.Multi.UninstallCore")
             : Lang.T("String.Multi.DownloadCore");
+
+        var version = string.IsNullOrWhiteSpace(_ctx.Settings.Terracotta.VersionOverride)
+            ? TerracottaDefaults.Version
+            : _ctx.Settings.Terracotta.VersionOverride.Trim();
+        DefaultRouteText.Text = Lang.F("String.Multi.DefaultRoute", version, TerracottaPlatform.Classifier());
     }
+
+    private string StateText() => _core.StateKind switch
+    {
+        TerracottaStateKind.HostScanning => Lang.T("String.Multi.StateHostScanning"),
+        TerracottaStateKind.HostStarting => Lang.T("String.Multi.StateHostStarting"),
+        TerracottaStateKind.HostOk => Lang.T("String.Multi.StateHostOk"),
+        TerracottaStateKind.GuestConnecting => Lang.T("String.Multi.StateGuestConnecting"),
+        TerracottaStateKind.GuestStarting => Lang.T("String.Multi.StateGuestStarting"),
+        TerracottaStateKind.GuestOk => Lang.T("String.Multi.StateGuestOk"),
+        TerracottaStateKind.Exception => Lang.F("String.Multi.StateException", ""),
+        _ => Lang.T("String.Multi.StateWaiting")
+    };
 
     private static Brush AccentBrush()
         => Application.Current.TryFindResource("Brush.Accent") as Brush ?? Brushes.DodgerBlue;
@@ -87,13 +106,7 @@ public sealed partial class MultiplayerPage : UserControl, IRefreshablePage
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_ctx.Settings.Terracotta.PackageUrl))
-        {
-            Notice.Warn(Lang.T("String.Multi.Err.NoPackageUrl"));
-            new MultiplayerCoreDialog(_ctx).ShowDialog();
-            return;
-        }
-
+        // 默认路线：没填地址也能装（国内镜像优先，元数据失败会回退内置模板）。
         _busy = true;
         CoreActionButton.IsEnabled = false;
         CoreProgressBorder.Visibility = Visibility.Visible;

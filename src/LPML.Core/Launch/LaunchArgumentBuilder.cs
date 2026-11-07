@@ -144,7 +144,7 @@ public sealed class LaunchArgumentBuilder
             args.AddRange(SplitArguments(options.ExtraJvmArguments));
 
         args.Add($"-Dminecraft.launcher.brand=LPML");
-        args.Add($"-Dminecraft.launcher.version=1.0.0");
+        args.Add($"-Dminecraft.launcher.version={BuildInfo.Version}");
         return args;
     }
 
@@ -254,7 +254,7 @@ public sealed class LaunchArgumentBuilder
             ["${assets_index_name}"] = assetsIndex,
             ["${natives_directory}"] = nativesDirectory,
             ["${launcher_name}"] = "LPML",
-            ["${launcher_version}"] = "1.0.0",
+            ["${launcher_version}"] = BuildInfo.Version,
             ["${classpath}"] = classpath,
             ["${classpath_separator}"] = Path.PathSeparator.ToString(),
             ["${library_directory}"] = _paths.LibrariesDirectory,

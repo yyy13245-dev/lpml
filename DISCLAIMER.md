@@ -1,4 +1,4 @@
-# 免责声明 · Disclaimer
+﻿# 免责声明 · Disclaimer
 
 > 本文件同时以中文和英文提供。两种语言仅为便于阅读，若理解不一致，以中文版为准；两种文本都不构成法律意见。
 > This document is provided in both Chinese and English for convenience. If the two versions differ in interpretation, the Chinese version prevails. Neither version constitutes legal advice.
@@ -36,6 +36,9 @@ LPML（Let's Play Minecraft Launcher）是**第三方、非官方**的 Minecraft
 **请在首次使用前自行备份重要数据**（存档、配置、账户信息、系统还原点等），并自行判断所下载内容的来源、完整性、许可证与安全性。维护者不承担备份、审查、恢复或赔偿义务。
 
 ### 4. 第三方内容与外部服务
+
+**多人联机组件**：本软件的多人联机功能通过本地 HTTP API 调用**未经修改**的 Terracotta | 陶瓦联机官方二进制（© Burning_TNT 及贡献者，依 GNU Affero General Public License v3.0 or later 授权，并附例外条款），该程序基于 EasyTier。其版权、商标与许可归各自权利人所有，本软件不主张任何权利，也不静态或动态链接其代码；依据该例外条款，通过进程间通信接口与其交互不会使本软件被 AGPL 涵盖，本软件已在联机界面明显处标注版权信息。陶瓦联机依赖第三方公共节点与 P2P 穿透，可能失败、延迟或中断；HMCL 等第三方启动器的联机服务可能处于维护状态，跨启动器互通不受本软件控制，亦不作保证。
+
 
 本软件可能向官方服务、镜像站、Modrinth 等第三方发起请求，并按用户选择下载第三方提供的文件。维护者**不控制、不审查、不担保**这些服务与文件，也不对其可用性、内容、准确性、合法性、安全性或持续性负责。第三方服务可能随时变更、限流、停止服务或修改条款；由此造成的一切影响由用户自行承担。
 
@@ -100,6 +103,9 @@ By using this software you understand and accept that **you bear all risks and c
 **Back up important data before first use** (worlds, configs, account information, system restore points) and assess the source, integrity, licence and safety of anything you download yourself. The maintainers have no duty to back up, review, restore or compensate.
 
 ### 4. Third-party content and external services
+
+**Multiplayer components**: the multiplayer feature talks over a local HTTP API to the **unmodified** official Terracotta binary (© Burning_TNT and contributors, GNU Affero General Public License v3.0 or later with an exception), which builds on EasyTier. All copyrights, trademarks and licences remain with their respective owners. LPML claims no rights and does not statically or dynamically link their code; under that exception, interacting through the inter-process interface does not bring LPML under the AGPL, and the copyright notice is displayed prominently in the multiplayer UI. Terracotta depends on third-party public nodes and P2P traversal, which may fail, lag or drop. Third-party launchers such as HMCL may have their multiplayer service under maintenance; cross-launcher interoperability is outside our control and is not guaranteed.
+
 
 The software may contact official services, mirrors, Modrinth and other third parties, and downloads files chosen by the user. The maintainers **do not control, review or warrant** those services or files, nor their availability, content, accuracy, legality, security or continuity. Third-party services may change, rate-limit, shut down or amend their terms at any time; all resulting effects are borne by the user.
 

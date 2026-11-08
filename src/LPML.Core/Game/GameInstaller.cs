@@ -208,7 +208,30 @@ public sealed class GameInstaller
 
     /// <summary>检查某个版本是否完整（用于启动前检查 / 修复）。</summary>
     public async Task<List<DownloadItem>> BuildRepairItemsAsync(VersionJson version, CancellationToken token = default)
-        => await BuildInstallItemsAsync(version, true, token).ConfigureAwait(false);
+    {
+        var items = await BuildInstallItemsAsync(version, true, token).ConfigureAwait(false);
+        // 清单里 client jar / 依赖库是无条件加入的，只有 assets 做了「已存在就跳过」。
+        // 于是启动前检查永远返回一长串「缺失文件」，下载器瞬间全部跳过，
+        // 二次检查仍旧不为 0，启动被反复中止。这里统一按「存在 + 校验通过」过滤。
+        return items.Where(NeedsDownload).ToList();
+    }
+
+    private static bool NeedsDownload(DownloadItem item)
+    {
+        var path = item.Destination;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(item.Sha1))
+                return !string.Equals(HashHelper.Sha1File(path), item.Sha1.Trim(),
+                    StringComparison.OrdinalIgnoreCase);
+            if (item.ExpectedSize is > 0)
+                return new FileInfo(path).Length != item.ExpectedSize.Value;
+        }
+        catch (IOException) { return true; }
+        catch (UnauthorizedAccessException) { return true; }
+        return false;
+    }
 
     public bool IsJarPresent(string versionId) => File.Exists(_paths.VersionJarPath(versionId));
 }

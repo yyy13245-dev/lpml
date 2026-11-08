@@ -192,7 +192,9 @@ public sealed class MicrosoftAccountService
         var payload = new
         {
             Properties = new { SandboxId = "RETAIL", UserTokens = new[] { xblToken } },
-            RelyingParty = "http://minecraft.api.microsoft.com",
+            // 现行 Minecraft Services 依赖方（Minecraft Wiki / wiki.vg）。
+            // 旧的 http://minecraft.api.microsoft.com 已不再推荐。
+            RelyingParty = "rp://api.minecraftservices.com/",
             TokenType = "JWT"
         };
         using var response = await client.PostAsJsonAsync("https://xsts.auth.xboxlive.com/xsts/authorize", payload, token);

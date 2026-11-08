@@ -523,6 +523,12 @@ public sealed class LauncherSettings
     public string? SelectedInstanceId { get; set; }
 
     /// <summary>
+    /// 当前浏览的实例文件夹 id（null / 空 = 默认 .minecraft）。
+    /// 文件夹决定哪些实例可见、名称在哪一档里查重，而不是反过来由实例决定文件夹。
+    /// </summary>
+    public string? CurrentFolderId { get; set; }
+
+    /// <summary>
     /// 已接受的用户协议版本。0 表示尚未同意，首次启动会显示协议窗口；
     /// 协议版本提升后也会重新显示。只存本地 launcher.json，不上传。
     /// </summary>

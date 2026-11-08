@@ -1,4 +1,4 @@
-using LPML.App.Services;
+﻿using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Instances;
 using LPML.Core.Launch;
@@ -61,7 +61,7 @@ public sealed partial class InstancePickerControl : UserControl
         if (_ctx is null) return;
         _list.Clear();
         InstanceCombo.ItemsSource = null;
-        _list.AddRange(_ctx.Instances.Instances);
+        _list.AddRange(_ctx.InstancesInCurrentFolder());
         InstanceCombo.ItemsSource = _list;
 
         GameInstance? selected = null;

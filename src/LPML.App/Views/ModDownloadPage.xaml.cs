@@ -1,4 +1,4 @@
-using LPML.App.Services;
+﻿using LPML.App.Services;
 using LPML.App.Windows;
 using LPML.Core;
 using LPML.Core.Download;
@@ -78,7 +78,7 @@ public partial class ModDownloadPage : UserControl, IRefreshablePage, IParameter
     {
         _refreshing = true;
         InstanceCombo.ItemsSource = null;
-        var list = _ctx.Instances.Instances.ToList();
+        var list = _ctx.InstancesInCurrentFolder();
         InstanceCombo.ItemsSource = list;
 
         // 优先用跳转带过来的预选，其次保留本页已选，最后才回落到首页挂着的实例

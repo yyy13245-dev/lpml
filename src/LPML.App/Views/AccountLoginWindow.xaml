@@ -1,0 +1,93 @@
+﻿<Window x:Class="LPML.App.Views.AccountLoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LPML" Width="520" SizeToContent="Height" MaxHeight="640"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" FontFamily="{DynamicResource Font.Ui}">
+    <Border Background="{DynamicResource Brush.Window}" CornerRadius="{DynamicResource Radius.Card}"
+            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="22,18">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="580">
+            <StackPanel>
+                <TextBlock x:Name="TitleText" Text="" FontWeight="SemiBold" FontSize="15"/>
+                <TextBlock Text="{DynamicResource String.Account.AddHint}" Style="{StaticResource Text.Caption}"
+                           TextWrapping="Wrap" Margin="0,6,0,16"/>
+
+                <!-- 微软 -->
+                <StackPanel x:Name="PaneMicrosoft" Visibility="Collapsed">
+                    <TextBlock Text="{DynamicResource String.Account.MsTitle}" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="{DynamicResource String.Account.MsHint}"
+                               Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                    <TextBlock Text="Microsoft Client ID" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                    <TextBox x:Name="ClientIdBox" LostFocus="ClientIdBox_OnLostFocus"/>
+                    <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.MsStart}" Margin="0,14,0,0" Padding="22,10"
+                            HorizontalAlignment="Left" Click="MicrosoftLogin_OnClick"/>
+                    <Border Margin="0,14,0,0" Padding="14" Background="{DynamicResource Brush.Card}"
+                            CornerRadius="{DynamicResource Radius.Small}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                            x:Name="CodePanel" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock x:Name="CodeHint" Text="" TextWrapping="Wrap" FontSize="12.5"/>
+                            <TextBlock x:Name="UserCodeText" Text="" FontSize="28" FontWeight="Bold" Margin="0,10,0,0"
+                                       Foreground="{DynamicResource Brush.Accent}" HorizontalAlignment="Center"/>
+                            <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.OpenVerifyPage}" Margin="0,12,0,0" Padding="18,8"
+                                    HorizontalAlignment="Center" Click="OpenVerify_OnClick"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="MicrosoftStatus" Text="" Style="{StaticResource Text.Caption}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- 离线 -->
+                <StackPanel x:Name="PaneOffline" Visibility="Collapsed">
+                    <TextBlock Text="{DynamicResource String.Account.OfflineTitle}" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="{DynamicResource String.Account.OfflineHint}"
+                               Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                    <TextBlock Text="{DynamicResource String.Account.PlayerName}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                    <TextBox x:Name="OfflineNameBox" Width="260" HorizontalAlignment="Left"/>
+                    <TextBlock Text="{DynamicResource String.Account.OfflineUuid}" Style="{StaticResource Text.Caption}" Margin="0,16,0,6"/>
+                    <TextBox x:Name="OfflineUuidBox" Width="330" HorizontalAlignment="Left" TextChanged="OfflineUuid_OnTextChanged"/>
+                    <TextBlock x:Name="OfflineUuidHint" Text="" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,6,0,0" FontSize="10.5"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.UuidRandom}" Padding="14,6" Click="RandomUuid_OnClick"/>
+                        <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Account.UuidReset}" Margin="8,0,0,0" Padding="14,6" Click="ResetUuid_OnClick"/>
+                    </StackPanel>
+                    <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.AddOffline}" Margin="0,16,0,0" Padding="22,10"
+                            HorizontalAlignment="Left" Click="AddOffline_OnClick"/>
+                </StackPanel>
+
+                <!-- 外置 -->
+                <StackPanel x:Name="PaneYggdrasil" Visibility="Collapsed">
+                    <TextBlock Text="{DynamicResource String.Account.YggTitle}" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="{DynamicResource String.Account.YggHint}"
+                               Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                    <TextBlock Text="{DynamicResource String.Account.ServerAddress}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                    <TextBox x:Name="AuthServerBox"/>
+                    <TextBlock Text="{DynamicResource String.Account.EmailOrUser}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                    <TextBox x:Name="AuthUserBox"/>
+                    <TextBlock Text="{DynamicResource String.Account.Password}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                    <PasswordBox x:Name="AuthPasswordBox"/>
+                    <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.Login}" Margin="0,14,0,0" Padding="22,10"
+                            HorizontalAlignment="Left" Click="YggdrasilLogin_OnClick"/>
+                </StackPanel>
+
+                <!-- LittleSkin -->
+                <StackPanel x:Name="PaneLittleSkin" Visibility="Collapsed">
+                    <TextBlock Text="{DynamicResource String.Account.LittleSkinTitle}" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="{DynamicResource String.Account.LittleSkinHint}"
+                               Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                    <TextBlock Text="{DynamicResource String.Account.Server}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                    <TextBox x:Name="LittleSkinServerBox" IsReadOnly="True"/>
+                    <TextBlock Text="{DynamicResource String.Account.EmailOrUser2}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                    <TextBox x:Name="LittleSkinUserBox"/>
+                    <TextBlock Text="{DynamicResource String.Account.Password2}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
+                    <PasswordBox x:Name="LittleSkinPasswordBox"/>
+                    <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Account.LoginLittleSkin}" Margin="0,14,0,0" Padding="22,10"
+                            HorizontalAlignment="Left" Click="LittleSkinLogin_OnClick"/>
+                </StackPanel>
+
+                <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Msg.Common.Close}"
+                        Margin="0,20,0,0" Padding="18,8" HorizontalAlignment="Right" Click="Close_OnClick"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</Window>

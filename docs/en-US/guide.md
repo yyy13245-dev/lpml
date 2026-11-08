@@ -148,8 +148,9 @@ Create as many folders as you like; each is a **complete game directory**
 (`versions / libraries / assets / mods / saves / config`, ...).
 
 - Paths support **absolute, relative (to the launcher root) and environment variables** (`%USERPROFILE%\...`).
-- In **Instance Settings → Folder** you can switch folders, set a directory directly,
-  and install game files into that folder.
+- The **Instances → Folders** page is the single place to create / delete folders, set the current
+  one, list the instances and versions actually inside it, and complete game files for a selected instance.
+  Instance Settings no longer switches folders.
 - Resolution order: **explicit directory > instance folder > isolation dir > default `.minecraft`**.
 
 ### Instance isolation
@@ -338,7 +339,7 @@ To disable it: **Settings → Advanced → Enable log guard process** (takes eff
 1. Open "Multiplayer" in the sidebar and click "Download core". The default route fetches the official v0.4.2 bundle automatically (CN mirrors first); no URL needed.
 2. **Host**: open "Create room", launch an instance, then press Esc → "Open to LAN" in game. Click "Create room" and share the invitation code once it appears.
 3. **Guest**: open "Join room", paste the code (`U/XXXX-XXXX-XXXX-XXXX`) and click "Join room". Once joined, launch the game and double-click the "Terracotta lobby" in the Multiplayer list.
-4. Codes are compatible with HMCL / PCL CE / FCL. HMCL's official multiplayer page is currently marked "under maintenance"; connectivity depends on the other version and network.
+4. Codes are compatible with HMCL / PCL CE / FCL. Connectivity depends on the other launcher's version and network; interoperability is not guaranteed.
 5. Under "Settings" you can override the download URL and version, add custom public nodes (one per line), or point at HMCL's downloaded core folder to reuse the same binary.
 
 P2P is less reliable than relayed servers. It is meant for playing with friends, not as a replacement for a Minecraft Java Edition server.

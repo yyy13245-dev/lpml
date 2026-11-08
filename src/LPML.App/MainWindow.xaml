@@ -41,6 +41,7 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                        <Button Style="{StaticResource Button.Icon}" Content="↻" Click="Restart_OnClick" ToolTip="{DynamicResource String.Main.Restart}" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
                         <Button Style="{StaticResource Button.Icon}" Content="—" Click="Minimize_OnClick" ToolTip="{DynamicResource String.Main.Minimize}" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
                         <Button Style="{StaticResource Button.Icon}" Content="□" Click="Maximize_OnClick" ToolTip="{DynamicResource String.Main.Maximize}" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
                         <Button Style="{StaticResource Button.Icon}" Content="✕" Click="Close_OnClick" ToolTip="{DynamicResource String.Main.Close}" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>

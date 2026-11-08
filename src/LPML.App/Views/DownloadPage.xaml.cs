@@ -1,4 +1,4 @@
-using LPML.App.Services;
+﻿using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Integration;
 using LPML.Core.Java;
@@ -132,48 +132,6 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
         window?.NavigateToContent(new VersionInstallPage(window!, entry));
     }
 
-    private async void InstallGame_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (VersionList.SelectedItem is not ManifestVersion entry) return;
-        var installTask = Context.Downloads.BeginTask(entry.Id, "game");
-        Context.Downloads.MarkTaskReady();
-        try
-        {
-            var json = await Context.ManifestService.FetchVersionJsonAsync(entry);
-            if (json is null) { Notice.Error(Lang.T("String.Msg.Download.JsonFailed")); return; }
-            var items = await Context.Installer.BuildInstallItemsAsync(json, IncludeAssetsCheck.IsChecked == true);
-            if (items.Count == 0)
-            {
-                Notice.Info(Lang.T("String.Msg.Download.AllExist"));
-                if (CreateInstanceCheck.IsChecked == true) CreateInstance(entry.Id, Lang.T("String.Msg.Download.Vanilla"));
-                return;
-            }
-            await StartDownloadsAsync(items, Lang.F("String.Msg.Download.Installing", entry.Id), installTask);
-
-            // 选了加载器就接着装（内联，不再单独开页）
-            var kind = (LoaderKindCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "";
-            var finalVersionId = entry.Id;
-            var loaderName = Lang.T("String.Msg.Download.Vanilla");
-
-            if (!string.IsNullOrEmpty(kind) && kind != Lang.T("String.Msg.Download.Vanilla"))
-            {
-                VersionStatusText.Text = Lang.F("String.Msg.Download.InstallingLoader", kind);
-                var installed = await InstallLoaderAsync(installTask);
-                if (installed is not null) { finalVersionId = installed; loaderName = kind; }
-            }
-
-            if (CreateInstanceCheck.IsChecked == true) CreateInstance(finalVersionId, loaderName);
-            Context.Downloads.MarkFinished(installTask);
-        }
-        catch (Exception ex)
-        {
-            var failedStep = Context.Downloads.Tasks.LastOrDefault()?.SnapshotSteps().LastOrDefault();
-            if (failedStep is not null) { failedStep.Status = TaskStepStatus.Failed; failedStep.Detail = ex.Message; }
-            Log.Error("Download", Lang.T("String.Msg.Download.InstallFailedTitle"), ex);
-            Notice.Error(Lang.T("String.Msg.Download.InstallFailedTitle"), ex.Message);
-        }
-    }
-
     public async Task StartDownloadsAsync(List<DownloadItem> items, string title,
         LPML.Core.Download.DownloadTask? task = null)
     {
@@ -182,153 +140,6 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
         if (task is null) Context.Downloads.Enqueue(items);
         else Context.Downloads.Enqueue(items, task);
         await Context.Downloads.RunAsync();
-    }
-
-    private void CreateInstance(string versionId, string loader)
-    {
-        var instance = Context.Instances.Create(versionId, versionId, Context.Settings.Paths.InstanceIsolation);
-        if (loader != Lang.T("String.Msg.Download.Vanilla")) { instance.LoaderName = loader; }
-        Context.Settings.SelectedInstanceId = instance.Id;
-        Context.Save();
-    }
-
-    // ── 加载器 ──────────────────────────────────────────────
-    private async void VersionList_OnSelectionChanged(object sender, SelectionChangedEventArgs e) => await LoadLoaderVersionsAsync();
-
-    private async void LoaderKindCombo_OnSelectionChanged(object sender, SelectionChangedEventArgs e) => await LoadLoaderVersionsAsync();
-
-    private async Task LoadLoaderVersionsAsync()
-    {
-        if (!_ready) return;
-        var mc = (VersionList.SelectedItem as ManifestVersion)?.Id;
-        if (string.IsNullOrEmpty(mc)) return;
-        LoaderVersionCombo.Items.Clear();
-        try
-        {
-            var kind = (LoaderKindCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "";
-            switch (kind)
-            {
-                case "Fabric":
-                    foreach (var v in await Context.Loaders.GetFabricLoadersAsync(mc)) LoaderVersionCombo.Items.Add(v.Version);
-                    break;
-                case "Quilt":
-                    foreach (var v in await Context.Loaders.GetQuiltLoadersAsync()) LoaderVersionCombo.Items.Add(v);
-                    break;
-                case "Forge":
-                    foreach (var v in await Context.Loaders.GetForgeVersionsAsync(mc)) LoaderVersionCombo.Items.Add(v.Version);
-                    break;
-                case "NeoForge":
-                    foreach (var v in await Context.Loaders.GetNeoForgeVersionsAsync(mc)) LoaderVersionCombo.Items.Add(v.Version);
-                    break;
-                case "OptiFine":
-                    foreach (var v in await Context.Loaders.GetOptiFineVersionsAsync(mc)) LoaderVersionCombo.Items.Add(v.Patch);
-                    break;
-            }
-            if (LoaderVersionCombo.Items.Count > 0) LoaderVersionCombo.SelectedIndex = 0;
-        }
-        catch (Exception ex)
-        {
-            Log.Warn("Download", Lang.T("String.Msg.Download.LoaderListFailed") + ex.Message);
-        }
-    }
-
-    /// <summary>安装加载器（由"安装游戏"流程内联调用）。返回最终版本 Id，失败返回 null。</summary>
-    private async Task<string?> InstallLoaderAsync(LPML.Core.Download.DownloadTask? task = null)
-    {
-        var mc = (VersionList.SelectedItem as ManifestVersion)?.Id;
-        var version = LoaderVersionCombo.SelectedItem?.ToString();
-        if (string.IsNullOrEmpty(mc) || string.IsNullOrEmpty(version)) return null;
-        var kind = (LoaderKindCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "";
-
-        try
-        {
-            // 在任务里登记安装步骤，安装选项卡能看到它在做什么
-            var step = task is null
-                ? Context.Downloads.AddStep(Lang.F("String.Task.StepInstallLoader", kind, version))
-                : Context.Downloads.AddStep(Lang.F("String.Task.StepInstallLoader", kind, version), task);
-            if (step is not null)
-            {
-                step.Status = TaskStepStatus.Running;
-                step.Detail = mc ?? "";
-            }
-
-            string versionId;
-            switch (kind)
-            {
-                case "Fabric":
-                    versionId = await Context.Loaders.InstallFabricAsync(mc, version);
-                    break;
-                case "Quilt":
-                    versionId = await Context.Loaders.InstallQuiltAsync(mc, version);
-                    break;
-                case "Forge":
-                case "NeoForge":
-                {
-                    var java = ResolveJava();
-                    if (java is null) { Notice.Error(Lang.T("String.Msg.Download.NeedJavaForge")); return null; }
-                    // Forge/NeoForge 要跑 installer（很慢），把输出同步到任务步骤里
-                    var progress = new Progress<string>(text =>
-                    {
-                        Dispatcher.Invoke(() => VersionStatusText.Text = text);
-                        if (step is not null) step.Detail = text;
-                    });
-                    versionId = kind == "Forge"
-                        ? await Context.Loaders.InstallForgeAsync(mc, version, java, progress)
-                        : await Context.Loaders.InstallNeoForgeAsync(mc, version, null, java, progress);
-                    break;
-                }
-                case "OptiFine":
-                {
-                    var java = ResolveJava();
-                    if (java is null) { Notice.Warn(Lang.T("String.Msg.Download.NeedJavaOptiFine")); return null; }
-                    var list = await Context.Loaders.GetOptiFineVersionsAsync(mc);
-                    var target = list.FirstOrDefault(x => x.Patch == version);
-                    if (target is null) { Notice.Warn(Lang.T("String.Msg.Download.OptiFineNotFound")); return null; }
-                    // Forge/NeoForge 要跑 installer（很慢），把输出同步到任务步骤里
-                    var progress = new Progress<string>(text =>
-                    {
-                        Dispatcher.Invoke(() => VersionStatusText.Text = text);
-                        if (step is not null) step.Detail = text;
-                    });
-                    await Context.Loaders.InstallOptiFineAsync(target, java, progress);
-                    return mc;
-                }
-                default:
-                    return null;
-            }
-
-            var json = Context.Resolver.Load(versionId);
-            if (json is not null)
-            {
-                var items = await Context.Installer.BuildInstallItemsAsync(json, true);
-                if (items.Count > 0) await StartDownloadsAsync(items, Lang.F("String.Msg.Download.Installing", kind), task);
-            }
-            return versionId;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Download", Lang.T("String.Msg.Download.LoaderInstallFailedTitle"), ex);
-            VersionStatusText.Text = Lang.T("String.Msg.Download.InstallFailedTitle") + ex.Message;
-            return null;
-        }
-   
-        finally
-        {
-            // 步骤收尾：成功标完成，失败标失败
-            var last = Context.Downloads.Tasks.LastOrDefault()?.SnapshotSteps().LastOrDefault();
-            if (last is not null && last.Status == TaskStepStatus.Running)
-            {
-                last.Status = TaskStepStatus.Done;
-                last.Detail = Lang.T("String.Core.Task.Done");
-            }
-        }
- }
-
-    private string? ResolveJava()
-    {
-        var pool = Context.Java.Detect();
-        var java = Context.Java.Recommend(17, pool) ?? Context.Java.Recommend(8, pool);
-        return java?.Path ?? Context.Java.FindRuntimeJava("java-runtime-gamma") ?? Context.Java.FindRuntimeJava("jre-legacy");
     }
 
     // ── 整合包 ──────────────────────────────────────────────
@@ -428,10 +239,7 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
     private void PackList_OnDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         => OpenPackDetail();
 
-    /// <summary>点整合包 → 进详情页选版本 / 加载器 / 名称。</summary>
-    private void InstallOnlinePack_OnClick(object sender, RoutedEventArgs e)
-        => OpenPackDetail();
-
+    /// <summary>列表只负责选中；安装一律进详情页完成。</summary>
     private void OpenPackDetail()
     {
         // 没选中时先在列表里选一个，别让用户点了没反应
@@ -450,67 +258,6 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
         var window = Window.GetWindow(this) as MainWindow;
         if (window is null) return;
         window.NavigateToContent(new ModpackInstallPage(window, row.Project));
-    }
-
-    private async Task InstallOnlinePackCoreAsync(LPML.Core.Modrinth.ModrinthProject project)
-    {
-
-        try
-        {
-            InstallPackButton.IsEnabled = false;
-            PackStatusText.Text = Lang.F("String.Download.PackPreparing", project.Title);
-
-            var versions = await Context.Modrinth.GetVersionsAsync(project.Slug ?? project.Title ?? "");
-            var version = versions?.FirstOrDefault();
-            if (version is null)
-            {
-                PackStatusText.Text = Lang.T("String.Download.NoPackVersion");
-                return;
-            }
-
-            // 整合包一律新建实例，避免覆盖已有存档与模组
-            var created = Context.Instances.Create(
-                project.Title ?? Lang.T("String.Download.TabModpack"), "", isolated: true);
-            var targetDirectory = Context.Instances.InstanceDirectory(created);
-
-            var packTask = Context.Downloads.BeginTask(project.Title ?? Lang.T("String.Download.TabModpack"), "modpack");
-            Context.Downloads.MarkTaskReady();
-
-            var item = Context.Modrinth.ToDownloadItem(version,
-                LPML.Core.Modrinth.ModrinthProjectType.Modpack, targetDirectory, project.Title);
-            item.Section = DownloadSections.PackContent;
-
-            PackStatusText.Text = Lang.F("String.Download.PackDownloading", project.Title);
-            await Context.Downloads.RunWithAsync(new[] { item }, packTask);
-
-            var filePath = item.Destination;
-            if (!File.Exists(filePath))
-            {
-                PackStatusText.Text = Lang.T("String.Download.PackDownloadFailed");
-                return;
-            }
-
-            var prepared = await Context.Modpacks.PrepareAsync(filePath, targetDirectory);
-            if (!string.IsNullOrWhiteSpace(prepared.GameVersion))
-                created.VersionId = prepared.GameVersion!;
-
-            Context.Modpacks.Extract(filePath, prepared.Extractions, targetDirectory);
-            if (prepared.Downloads.Count > 0)
-            {
-                foreach (var mod in prepared.Downloads) mod.Section = DownloadSections.PackContent;
-                PackStatusText.Text = Lang.F("String.Download.PackFetchingFiles", prepared.Downloads.Count);
-                await Context.Downloads.RunWithAsync(prepared.Downloads, packTask);
-            }
-
-            Context.Instances.Save();
-            Context.Downloads.MarkFinished(packTask);
-            PackStatusText.Text = Lang.F("String.Download.PackDone", project.Title, created.Name);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Modrinth", "Install online modpack failed", ex);
-            PackStatusText.Text = Lang.T("String.Download.PackInstallFailed") + ex.Message;
-        }
     }
 
     /// <summary>在线整合包列表行。</summary>
@@ -551,7 +298,13 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
             var instanceName = string.IsNullOrWhiteSpace(probe.Name)
                 ? Path.GetFileNameWithoutExtension(PackPathBox.Text)
                 : probe.Name;
-            var instance = Context.Instances.Create(instanceName, "", Context.Settings.Paths.InstanceIsolation);
+            var instance = Context.Instances.Create(instanceName, "",
+                Context.Settings.Paths.InstanceIsolation, Context.CurrentFolderId);
+            if (!string.IsNullOrEmpty(Context.CurrentFolderId))
+            {
+                instance.FolderId = Context.CurrentFolderId;
+                Context.Instances.Save();
+            }
             var target = Context.Instances.InstanceDirectory(instance);
 
             var (downloads, extractions, gameVersion, manualMods) =
@@ -571,11 +324,17 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
                     var json = await Context.ManifestService.FetchVersionJsonAsync(entry);
                     if (json is not null)
                     {
-                        var gameItems = await Context.Installer.BuildInstallItemsAsync(json, true);
-                        // gameItems 已由 BuildInstallItemsAsync 标成「原版内容」；
-                        // 这里先把整合包自带的模组标成「整合包内容」，两批才不会混成一组。
-                        foreach (var mod in downloads) mod.Section = DownloadSections.PackContent;
-                        downloads.AddRange(gameItems);
+                        // 原版文件也落到当前文件夹，不装回默认 .minecraft
+                        var previousDirectory = Context.Paths.BeginGameDirectory(Context.CurrentFolderDirectory());
+                        try
+                        {
+                            var gameItems = await Context.Installer.BuildInstallItemsAsync(json, true);
+                            // gameItems 已由 BuildInstallItemsAsync 标成「原版内容」；
+                            // 这里先把整合包自带的模组标成「整合包内容」，两批才不会混成一组。
+                            foreach (var mod in downloads) mod.Section = DownloadSections.PackContent;
+                            downloads.AddRange(gameItems);
+                        }
+                        finally { Context.Paths.EndGameDirectory(previousDirectory); }
                     }
                 }
             }

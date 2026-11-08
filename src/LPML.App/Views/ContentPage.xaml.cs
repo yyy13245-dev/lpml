@@ -1,4 +1,4 @@
-using LPML.App.Services;
+﻿using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Download;
 using LPML.Core.Instances;
@@ -58,7 +58,7 @@ public partial class ContentPage : UserControl
     {
         var currentId = (InstanceCombo.SelectedItem as GameInstance)?.Id;
         InstanceCombo.ItemsSource = null;
-        var list = App.Context.Instances.Instances.ToList();
+        var list = App.Context.InstancesInCurrentFolder();
         InstanceCombo.ItemsSource = list;
         if (list.Count > 0)
         {
@@ -462,7 +462,8 @@ public partial class ContentPage : UserControl
             // 整合包一律新建实例，避免覆盖用户已有的存档与模组
             var created = App.Context.Instances.Create(
                 _selected?.Title ?? Lang.T("String.Content.Type.Modpack"),
-                instance.VersionId, isolated: true);
+                instance.VersionId, isolated: true,
+                duplicateScopeFolderId: App.Context.CurrentFolderId);
             var targetDirectory = App.Context.Instances.InstanceDirectory(created);
 
             var prepared = await App.Context.Modpacks.PrepareAsync(filePath, targetDirectory);

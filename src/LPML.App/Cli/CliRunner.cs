@@ -43,7 +43,7 @@ public sealed partial class CliRunner
     /// <summary>返回进程退出码。</summary>
     public async Task<int> RunAsync(string[] args, CancellationToken token)
     {
-        if (args.Any(a => a is "--help" or "-h" or "/?")) { PrintHelp(); return 0; }
+        if (args.Any(a => a is "--help" or "-h" or "/?")) { PrintHelp(); Console.WriteLine(); PrintFullHelp(); return 0; }
 
         // 输出形态：默认 REPL，可用 --log-only / --input-only 切换
         if (!TryParseMode(args, out var mode)) return 1;
@@ -210,10 +210,12 @@ public sealed partial class CliRunner
         }
 
         var logFile = OpenConsoleLogFile();
-        var repl = new ReplConsole(header, hint);
+        var repl = new ReplConsole(header, hint) { TranscriptHint = Lang.T("String.Cli.HelpDone") };
 
-        // 命令回显也走日志区，避免直接写控制台破坏分区
+        // 命令回显也走日志区，避免直接写控制台破坏分区；
+        // 完整命令表例外，走全量普通输出，保证一行一条、全部可见
         _output = repl.AppendLog;
+        _transcript = repl.WriteTranscript;
         _clearScreen = repl.ClearLog;
 
         // 游戏日志 → REPL 上半区 + 落盘
@@ -245,6 +247,7 @@ public sealed partial class CliRunner
         // 后台等待退出，前台跑输入循环
         var exitTask = WaitForExitAsync(process, token);
         repl.Run();
+        _transcript = null;
 
         var exitCode = _gameExitCode ?? await exitTask.ConfigureAwait(false);
 
@@ -266,6 +269,12 @@ public sealed partial class CliRunner
     /// 其余模式直接写控制台。
     /// </summary>
     private Action<string> _output = Console.WriteLine;
+
+    /// <summary>
+    /// 大段文本（完整命令表）的全量输出通道。REPL 下指向 ReplConsole.WriteTranscript，
+    /// 一次性逐行打印、不截断、不加省略号；其余模式为 null，退回 _output 逐行输出。
+    /// </summary>
+    private Action<IEnumerable<string>>? _transcript;
 
     /// <summary>清屏动作。REPL 下清的是日志缓冲，不是整个屏幕。</summary>
     private Action _clearScreen = () => { try { Console.Clear(); } catch (IOException) { } };
@@ -528,7 +537,7 @@ public sealed partial class CliRunner
         var head = parts[0].ToLowerInvariant();
         var tail = parts.Length > 1 ? parts[1] : "";
 
-        // 同一套命令表在游戏启动前后都可用；完整列表只在 help 里，
+        // 同一套命令表在游戏启动前后都可用；完整列表只在 help 里一次性输出，
         // 底部常驻提示不再罗列命令。
         if (HandleCommonCommand(head, tail, out var shouldExit)) return shouldExit;
 
@@ -606,10 +615,12 @@ public sealed partial class CliRunner
 
         var repl = new ReplConsole(
             Lang.T("String.Cli.ShellHeader"),
-            Lang.T("String.Cli.ShellHint"));
+            Lang.T("String.Cli.ShellHint"))
+        { TranscriptHint = Lang.T("String.Cli.HelpDone") };
 
         _shellRepl = repl;
         _output = repl.AppendLog;
+        _transcript = repl.WriteTranscript;
         _clearScreen = repl.ClearLog;
 
         // 启动器自身日志（Guard、Java 扫描等）也投进日志区，
@@ -627,6 +638,7 @@ public sealed partial class CliRunner
         {
             LPML.App.App.CliLogHook = prevHook;
             _output = Console.WriteLine;
+            _transcript = null;
             _clearScreen = () => { try { Console.Clear(); } catch (IOException) { } };
             _shellRepl = null;
             _shellMode = false;
@@ -796,27 +808,37 @@ public sealed partial class CliRunner
     LPML.exe --cli [选项]
 
   {Lang.T("String.Cli.HelpOptions")}
-    --instance, -i <名称/ID>   {Lang.T("String.Cli.HelpInstance")}
-    --version,  -v <版本ID>    {Lang.T("String.Cli.HelpVersion")}
-    --account,  -a <用户名>    {Lang.T("String.Cli.HelpAccount")}
+    --instance <名称/ID>       {Lang.T("String.Cli.HelpInstance")}
+    -i <名称/ID>               {Lang.T("String.Cli.HelpInstance")}
+    --version <版本ID>         {Lang.T("String.Cli.HelpVersion")}
+    -v <版本ID>                {Lang.T("String.Cli.HelpVersion")}
+    --account <用户名>         {Lang.T("String.Cli.HelpAccount")}
+    -a <用户名>                {Lang.T("String.Cli.HelpAccount")}
     --arch <架构>              {Lang.T("String.Cli.HelpArch")}
-    --log-only, --log          {Lang.T("String.Cli.HelpLogOnly")}
-    --input-only, --input      {Lang.T("String.Cli.HelpInputOnly")}
+    --log-only                 {Lang.T("String.Cli.HelpLogOnly")}
+    --log                      {Lang.T("String.Cli.HelpLogOnly")}
+    --input-only               {Lang.T("String.Cli.HelpInputOnly")}
+    --input                    {Lang.T("String.Cli.HelpInputOnly")}
     --after <keep|hide|exit>   {Lang.T("String.Cli.HelpAfter")}
-    --yes,      -y             {Lang.T("String.Cli.HelpYes")}
+    --yes                      {Lang.T("String.Cli.HelpYes")}
+    -y                         {Lang.T("String.Cli.HelpYes")}
 
   {Lang.T("String.Cli.HelpQueries")}
-    --list, ls                 {Lang.T("String.Cli.HelpList")}
+    --list                     {Lang.T("String.Cli.HelpList")}
+    --list-instances           {Lang.T("String.Cli.HelpList")}
+    ls                         {Lang.T("String.Cli.HelpList")}
     --list-versions            {Lang.T("String.Cli.HelpListVersions")}
     --list-accounts            {Lang.T("String.Cli.HelpListAccounts")}
     --list-java                {Lang.T("String.Cli.HelpListJava")}
-    --help, -h                 {Lang.T("String.Cli.HelpHelp")}
+    --help                     {Lang.T("String.Cli.HelpHelp")}
+    -h                         {Lang.T("String.Cli.HelpHelp")}
+    /?                         {Lang.T("String.Cli.HelpHelp")}
 
   {Lang.T("String.Cli.HelpExamples")}
     LPML.exe --cli --list
-    LPML.exe --cli -i 我的生存服 -a Steve          # 默认 REPL
-    LPML.exe --cli -i 服务端 --log-only            # 只要日志
-    LPML.exe --cli -i 服务端 --input-only          # 只要输入
+    LPML.exe --cli -i 我的生存服 -a Steve
+    LPML.exe --cli -i 服务端 --log-only
+    LPML.exe --cli -i 服务端 --input-only
     LPML.exe --cli -v 1.21.4 --arch arm64 --yes");
         Console.WriteLine();
         Console.WriteLine(Lang.T("String.Cli.HelpMore"));

@@ -28,6 +28,17 @@
                 </StackPanel>
             </Border>
 
+            <!-- 联机核心启动失败时提供重试入口 -->
+            <Border x:Name="RestartPanel" Margin="0,0,0,16" Padding="12" Visibility="Collapsed"
+                    CornerRadius="{DynamicResource Radius.Small}"
+                    Background="{DynamicResource Brush.Window}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock x:Name="RestartStatusText" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    <Button x:Name="RestartButton" Style="{StaticResource Button.Base}" HorizontalAlignment="Left"
+                            Content="{DynamicResource String.Multi.RestartCore}" Padding="16,8" Click="RestartCore_OnClick"/>
+                </StackPanel>
+            </Border>
+
             <!-- 第二步：选择实例 + 一键进入房间 -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -44,6 +55,9 @@
                     </Border>
                 </StackPanel>
             </Border>
+
+            <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Multi.Back}"
+                    Margin="0,14,0,0" Padding="22,9" HorizontalAlignment="Left" Click="Back_OnClick"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

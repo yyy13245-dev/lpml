@@ -19,6 +19,8 @@ public sealed class NavItem
     public string Title { get; set; } = "";
     public string Icon { get; set; } = "";
     public string? PageKey { get; set; }
+    /// <summary>非空时该项不切换页面，而是弹出对应的账户登录小窗口。</summary>
+    public string? DialogKind { get; set; }
     public List<NavItem> Children { get; set; } = new();
 }
 
@@ -218,6 +220,7 @@ public partial class MainWindow : Window
                 Children =
                 {
                     new() { Title = Lang.T("String.Instance.Title"), Icon = "🧩", PageKey = "instances" },
+                    new() { Title = Lang.T("String.Nav.Folders"), Icon = "📁", PageKey = "folders" },
                     new() { Title = Lang.T("String.Nav.InstanceSettings"), Icon = "⚙", PageKey = "instancesettings" },
                     new() { Title = Lang.T("String.Nav.Mods"), Icon = "🧰", PageKey = "mods" },
                     new() { Title = Lang.T("String.Content.Title"), Icon = "🌐", PageKey = "content" },
@@ -264,6 +267,7 @@ public partial class MainWindow : Window
 
         _pageFactories["play"] = () => new Views.PlayPage(Context) { MainWindow = this };
         _pageFactories["instances"] = () => new Views.InstancesPage(Context);
+        _pageFactories["folders"] = () => new Views.FoldersPage(Context);
         _pageFactories["instancesettings"] = () => new Views.InstanceSettingsPage();
         _pageFactories["download"] = () => new Views.DownloadPage(Context);
         _pageFactories["moddownload"] = () => new Views.ModDownloadPage(Context);
@@ -280,16 +284,17 @@ public partial class MainWindow : Window
     /// <summary>账户页：作为二级界面从左下角账户入口进入。</summary>
     private static List<NavItem> AccountSections() => new()
     {
-        new() { Title = Lang.T("String.Account.TabMicrosoft"), Icon = "🪟", PageKey = "accounts?tab=microsoft" },
-        new() { Title = Lang.T("String.Account.TabOffline"), Icon = "🔌", PageKey = "accounts?tab=offline" },
-        new() { Title = Lang.T("String.Account.TabYggdrasil"), Icon = "🌐", PageKey = "accounts?tab=yggdrasil" },
-        new() { Title = Lang.T("String.Account.LittleSkinTitle"), Icon = "🎀", PageKey = "accounts?tab=littleskin" }
+        new() { Title = Lang.T("String.Account.TabMicrosoft"), Icon = "🪟", PageKey = "accounts", DialogKind = "microsoft" },
+        new() { Title = Lang.T("String.Account.TabOffline"), Icon = "🔌", PageKey = "accounts", DialogKind = "offline" },
+        new() { Title = Lang.T("String.Account.TabYggdrasil"), Icon = "🌐", PageKey = "accounts", DialogKind = "yggdrasil" },
+        new() { Title = Lang.T("String.Account.LittleSkinTitle"), Icon = "🎀", PageKey = "accounts", DialogKind = "littleskin" }
     };
 
     private void NavList_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!_ready) return;
+        if (_suppressNav || !_ready) return;
         if (NavList.SelectedItem is not NavItem item) return;
+        if (!CanNavigateAway()) { RestoreNav(); return; }
 
         // 无子项（如"开始游戏"）：直接在一级页显示
         if (item.Children.Count == 0)
@@ -321,9 +326,51 @@ public partial class MainWindow : Window
 
     private void SubNavList_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressNav) return;
         if (SubNavList.SelectedItem is not NavItem item) return;
+        if (!string.IsNullOrEmpty(item.DialogKind))
+        {
+            ShowAccountDialog(item.DialogKind!);
+            return;
+        }
         if (string.IsNullOrEmpty(item.PageKey)) return;
+        if (!CanNavigateAway()) { RestoreNav(); return; }
         ShowSubPage(item.PageKey!);
+    }
+
+    /// <summary>账户侧栏四项各自弹一个小窗口，页面本身始终是完整的账户列表。</summary>
+    private void ShowAccountDialog(string kind)
+    {
+        var dialog = new Views.AccountLoginWindow(kind) { Owner = this };
+        dialog.ShowDialog();
+        // 弹窗里添加 / 删除账户后，回到刷新过的列表
+        ShowSubPage("accounts");
+        _suppressNav = true;
+        try { SubNavList.SelectedItem = null; }
+        finally { _suppressNav = false; }
+    }
+
+    /// <summary>账户弹窗改动账户后，让主界面的账户列表跟上。</summary>
+    public void RefreshAccountsPage()
+    {
+        if (_pageCache.TryGetValue("accounts", out var page) && page is Views.AccountsPage accounts)
+            accounts.Refresh();
+    }
+
+    // 用户取消「离开房间」时，把导航选中项还原回去，避免界面显示与房间状态不一致。
+    private bool _suppressNav;
+
+    private void RestoreNav()
+    {
+        _suppressNav = true;
+        try
+        {
+            if (Level2.Visibility == Visibility.Visible)
+                SubNavList.SelectedItem = _currentSection?.Children.FirstOrDefault(c => c.PageKey == "multiplayer");
+            else
+                NavList.SelectedItem = _currentSection;
+        }
+        finally { _suppressNav = false; }
     }
 
     /// <summary>在二级界面里显示某个子页面。</summary>
@@ -387,11 +434,15 @@ public partial class MainWindow : Window
         SubNavList.ItemsSource = root.Children;
         Level1.Visibility = Visibility.Collapsed;
         Level2.Visibility = Visibility.Visible;
-        if (root.Children.Count > 0)
+        _suppressNav = true;
+        try
         {
-            SubNavList.SelectedIndex = 0;
-            ShowSubPage(root.Children[0].PageKey!);
+            SubNavList.ItemsSource = root.Children;
+            // 不预先选中：否则点击已选中的「微软登录」不会触发事件，弹窗出不来
+            SubNavList.SelectedIndex = -1;
         }
+        finally { _suppressNav = false; }
+        ShowSubPage("accounts");
     }
 
     /// <summary>按 key 取（或创建）页面；带 ?tab= 参数的会先传参。</summary>
@@ -416,8 +467,48 @@ public partial class MainWindow : Window
     /// <summary>切换页面（带淡入 + 上浮 + 拉伸动效）。</summary>
     public bool CanNavigateAway()
     {
+        // 房间页是二级页里的 detail 内容，侧边栏 / 关闭窗口离开时也要结束房间。
+        var host = Level2.Visibility == Visibility.Visible ? SubPageHost : PageHost;
+        if (host.Content is Views.MultiplayerRoomPage room) return room.ConfirmLeave();
         if (_pageCache.TryGetValue("multiplayer", out var mp) && mp is Views.MultiplayerPage page && !page.ConfirmLeave()) return false;
         return true;
+    }
+
+    /// <summary>
+    /// 实例设置的唯一入口：实例页双击和侧栏「实例设置」都走这里，
+    /// 显示同一个页面、同一个实例，不再出现「一处单实例、一处全局」两套界面。
+    /// </summary>
+    public void ShowInstanceSettings(LPML.Core.Instances.GameInstance? instance = null)
+    {
+        var item = _currentSection?.Children.FirstOrDefault(c => c.PageKey == "instancesettings");
+        if (item is not null)
+        {
+            _suppressNav = true;
+            try { SubNavList.SelectedItem = item; }
+            finally { _suppressNav = false; }
+            ShowSubPage("instancesettings");
+        }
+        else
+        {
+            ShowLevel1();
+            Navigate("instancesettings");
+        }
+        if (instance is not null && FindPage("instancesettings") is Views.InstanceSettingsPage page)
+            page.SetInstance(instance);
+    }
+
+    /// <summary>从房间页 / 创建页 / 加入页回到联机入口（联机在「实例」分区的二级页里）。</summary>
+    public void ShowMultiplayer()
+    {
+        var item = _currentSection?.Children.FirstOrDefault(c => c.PageKey == "multiplayer");
+        if (item is not null)
+        {
+            SubNavList.SelectedItem = item;
+            ShowSubPage("multiplayer");
+            return;
+        }
+        ShowLevel1();
+        Navigate("multiplayer");
     }
 
     public void NavigateToContent(FrameworkElement content)
@@ -603,6 +694,28 @@ public partial class MainWindow : Window
         => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void Close_OnClick(object sender, RoutedEventArgs e) => Close();
+
+    /// <summary>重新启动启动器：清掉内存缓存与页面状态，重新走一次初始化。</summary>
+    private void Restart_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!CanNavigateAway()) return;
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return;
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory
+            });
+            System.Windows.Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("App", "Restart failed: " + ex.Message);
+            Notice.Warn(Lang.T("String.Main.Restart") + "： " + ex.Message);
+        }
+    }
 
     private void MainWindow_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {

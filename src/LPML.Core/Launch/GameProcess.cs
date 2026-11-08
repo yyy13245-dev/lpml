@@ -45,8 +45,18 @@ public sealed class GameProcess
     public int Start(ProcessStartInfo startInfo)
     {
         _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        _process.OutputDataReceived += (_, e) => { if (e.Data is not null) OutputReceived?.Invoke(this, e.Data); };
-        _process.ErrorDataReceived += (_, e) => { if (e.Data is not null) OutputReceived?.Invoke(this, e.Data); };
+        _process.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data is null) return;
+            GameOutputHub.Push(e.Data);
+            OutputReceived?.Invoke(this, e.Data);
+        };
+        _process.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is null) return;
+            GameOutputHub.Push(e.Data);
+            OutputReceived?.Invoke(this, e.Data);
+        };
         _process.Exited += (_, _) => Exited?.Invoke(this, _process.ExitCode);
 
         // 进程优先级

@@ -56,6 +56,14 @@
                         </Grid>
                     </Border>
                     <TextBlock x:Name="CoreErrorText" Margin="0,10,0,0" FontSize="12" Foreground="{DynamicResource Brush.ForegroundMuted}" TextWrapping="Wrap" Visibility="Collapsed"/>
+                    <!-- 核心启动失败 / 中途退出时提供重试入口 -->
+                    <StackPanel x:Name="CoreRestartRow" Orientation="Horizontal" Margin="0,10,0,0" Visibility="Collapsed">
+                        <Button Style="{StaticResource Button.Base}" x:Name="CoreRestartButton"
+                                Content="{DynamicResource String.Multi.RestartCore}" Padding="16,8"
+                                Click="CoreRestart_OnClick"/>
+                        <TextBlock x:Name="CoreRestartHint" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"
+                                   Margin="12,0,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Brush.ForegroundMuted}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

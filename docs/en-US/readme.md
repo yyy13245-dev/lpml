@@ -57,7 +57,7 @@ This repository contains no game files, account credentials or binary releases. 
 - **Strings live in language packs**: `src/LPML.App/Locales/*.xaml`, zero hard-coded UI text
 - XAML uses `{DynamicResource String.Module.Item}`; C# uses `Lang.T` / `Lang.F`; Core uses `L.T` / `L.F`
 - **Switch at runtime**: Settings → Advanced → Language, applies instantly with no restart
-- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1374 entries each, keys 1:1
+- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1424 entries each, keys 1:1
 - Key format `String.<Module>.<Item>`, e.g. `String.Settings.Title`
 - To add a language: copy `zh-CN.xaml`, translate the values, add one entry to `LauncherLanguage`
 
@@ -90,7 +90,9 @@ This repository contains no game files, account credentials or binary releases. 
   and the download item appears in the Task Center with its own progress
 
 ### Task Center
-Top-right **Tasks** button, **visible only when there are tasks**. Three levels:
+Top-right **Tasks** button, **visible only when there are tasks**. Three levels.
+Task cards are typed: installing a game keeps the original card, while "Complete game files"
+gets its own card listing the jar / libraries / assets being fetched (never an empty list).
 
 ```
 Task list (one operation = one group)
@@ -140,6 +142,10 @@ Isolation data lives in **`.minecraft\instances\<id>\`**, so copying `.minecraft
 ### Instance Folders
 Any number of folders, each a **complete game directory**. Absolute, relative and
 environment-variable paths are all supported.
+The **Instances → Folders** page is the single entry point: create / delete folders, set the current
+one, and list the instances and versions actually on disk in that folder (scanned from real files,
+not from the shared `.minecraft` cache). Creating a folder never reassigns existing instances.
+Instance names are checked per folder, so two folders may hold instances with the same name.
 Resolution order: explicit directory > instance folder > isolation dir > default `.minecraft`.
 Each instance directory gets an **`lpml.json`** (name / version / loader / isolation mode) that travels with it.
 
@@ -179,10 +185,10 @@ Because it is a direct child, Windows Task Manager groups both LPML entries toge
 P2P multiplayer powered by [Terracotta](https://burningtnt.github.io/Terracotta/) and [EasyTier](https://easytier.cn/), working out of the box:
 
 - **Default route**: clicking "Download core" fetches the official v0.4.2 bundle, CN mirrors first (Gitee → CNB → mirror → GitHub). Version metadata is read from the same `terracotta.json` HMCL uses; if unavailable, built-in templates and a verified SHA-512 take over.
-- **Official integration**: the unmodified official binary is launched with `--hmcl` and listens on `127.0.0.1` only. The OS-assigned port is discovered via `terracotta.lock` (2-byte big-endian), a port JSON file, or process output. All actions use the local HTTP API: `/state`, `/state/scanning`, `/state/guesting`, `/state/ide`, `/meta`, `/log`, `/panic?peaceful=true`.
+- **Integration**: the unmodified official binary is started directly, without any private launch arguments. LPML never opens a browser itself and talks to the local HTTP API on `127.0.0.1` only. If Terracotta opens its own browser page, the same actions can be performed there. The OS-assigned port is discovered via `terracotta.lock` (2-byte big-endian), a port JSON file, or process output. All actions use the local HTTP API: `/state`, `/state/scanning`, `/state/guesting`, `/state/ide`, `/meta`, `/log`, `/panic?peaceful=true`.
 - **HMCL compatible**: invitation codes use the same `U/XXXX-XXXX-XXXX-XXXX` format (base-34, no I/O), so HMCL / PCL CE / FCL codes work directly. You can also point Settings at HMCL's downloaded core folder to reuse the same binary.
 - **Your own config is kept**: override URL, version and checksum (SHA-512, legacy SHA-256 accepted); v0.4.2 supports custom EasyTier public nodes (one per line, merged with built-ins); fixed invitation code and display name are optional.
-- **Note**: P2P is less reliable than relayed servers and is meant for playing with friends, not as a replacement for a Minecraft Java Edition server. HMCL's official multiplayer page is currently marked "under maintenance"; cross-launcher connectivity is not guaranteed.
+- **Note**: P2P is less reliable than relayed servers and is meant for playing with friends, not as a replacement for a Minecraft Java Edition server. Cross-launcher connectivity depends on the other launcher's version and network and is not guaranteed.
 
 > **Copyright**: Terracotta © Burning_TNT and contributors, licensed **AGPL-3.0-or-later (with exception)**; built on EasyTier. LPML does not link Terracotta code — it talks to the unmodified official binary over its local HTTP API and shows the copyright notice prominently in the multiplayer UI.
 
@@ -207,8 +213,8 @@ src/
 │  ├─ Core/ Config/ Mirror/ Download/ Game/ Java/ Auth/ Launch/
 │  ├─ Instances/ Mods/ Integration/ Utils/
 └─ LPML.App/             # WPF UI (net10.0-windows)
-   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1374 entries each)
-   ├─ Views/             # 18 pages (incl. task center, version install, modpack install, mod download, docs)
+   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1424 entries each)
+   ├─ Views/             # 19 pages (incl. task center, version install, modpack install, mod download, docs)
    ├─ Windows/ Utils/ Services/ Themes/ Styles/ Helpers/ Controls/
 docs/                    # Built-in documents (zh-CN / en-US)
 tools/static_check.py    # Static checker

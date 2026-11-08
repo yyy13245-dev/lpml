@@ -1,4 +1,4 @@
-using LPML.App.Services;
+﻿using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Instances;
 using LPML.Core.Launch;
@@ -64,12 +64,18 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
 
     public void Refresh()
     {
-        var selected = Context.Instances.Find(Context.Settings.SelectedInstanceId)
-                       ?? Context.Instances.Instances.FirstOrDefault();
+        // 两个入口（实例页双击 / 侧栏）都指向当前文件夹里的同一个实例
+        if (_instance is not null && !Context.IsInCurrentFolder(_instance)) _instance = null;
+        // 文件夹决定实例：被选中的实例若不属于当前文件夹，就回退到本文件夹里的第一个，
+        // 不再把别的文件夹里的实例显示成「这个文件夹里也有」。
+        var selected = Context.Instances.Find(Context.Settings.SelectedInstanceId);
+        if (selected is null || !Context.IsInCurrentFolder(selected))
+            selected = Context.InstancesInCurrentFolder().FirstOrDefault();
         ApplyNoInstanceState(selected is null);
         if (selected is null) return;
 
         _instance = selected;
+        Context.Settings.SelectedInstanceId = selected.Id;
         Load();
     }
 
@@ -151,7 +157,6 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
         LastLaunchText.Text = L.F("String.Msg.InstanceSettings.LastLaunch",
             instance.LastPlayed.ToString("yyyy-MM-dd HH:mm")) + "\n" + launchSummary;
 
-        if (DirOverrideBox is not null) DirOverrideBox.Text = instance.DirectoryOverride ?? "";
         UpdatePrivacyHint();
         LoadMods();
         ShowSelectedPane();
@@ -175,199 +180,6 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
     {
         var window = Window.GetWindow(this) as MainWindow;
         window?.Navigate("download");
-    }
-
-    // ── 实例文件夹 ──────────────────────────────────────────
-
-    /// <summary>刷新文件夹章节：下拉、当前目录、该文件夹里的实例。</summary>
-    private void LoadFolderSection()
-    {
-        if (_instance is null) return;
-        try
-        {
-            var folders = new List<InstanceFolder>
-            {
-                new() { Id = "", Name = L.T("String.InstanceSettings.FolderDefault") }
-            };
-            folders.AddRange(Context.Folders.Folders);
-
-            FolderCombo.ItemsSource = folders;
-            var currentId = _instance.FolderId ?? "";
-            FolderCombo.SelectedItem = folders.FirstOrDefault(f => f.Id == currentId) ?? folders[0];
-
-            CurrentDirText.Text = Context.WorkingDirectoryFor(_instance);
-
-            // 该文件夹里的实例
-            var inFolder = Context.Instances.Instances
-                .Where(i => string.Equals(i.FolderId ?? "", currentId, StringComparison.Ordinal))
-                .ToList();
-            FolderInstanceList.ItemsSource = inFolder;
-            if (inFolder.Count > 0)
-                FolderInstanceList.SelectedItem = inFolder.FirstOrDefault(i => i.Id == _instance.Id);
-        }
-        catch (Exception ex)
-        {
-            Log.Warn("Instance", "Load folder section failed: " + ex.Message);
-        }
-    }
-
-    private void FolderCombo_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!_ready) return;
-        if (_instance is null) return;
-        if (FolderCombo.SelectedItem is not InstanceFolder folder) return;
-
-        _instance.FolderId = string.IsNullOrEmpty(folder.Id) ? null : folder.Id;
-        Context.Instances.Save();
-        CurrentDirText.Text = Context.WorkingDirectoryFor(_instance);
-        LoadFolderInstances();
-    }
-
-    private void LoadFolderInstances()
-    {
-        if (_instance is null) return;
-        var currentId = _instance.FolderId ?? "";
-        FolderInstanceList.ItemsSource = Context.Instances.Instances
-            .Where(i => string.Equals(i.FolderId ?? "", currentId, StringComparison.Ordinal))
-            .ToList();
-    }
-
-    /// <summary>直接指定目录（相对或绝对），保存后立刻生效。</summary>
-    private void DirOverride_OnChanged(object sender, RoutedEventArgs e)
-    {
-        if (!_ready) return;
-        if (_instance is null) return;
-        var text = DirOverrideBox.Text.Trim();
-        _instance.DirectoryOverride = string.IsNullOrEmpty(text) ? null : text;
-        Context.Instances.Save();
-        CurrentDirText.Text = Context.WorkingDirectoryFor(_instance);
-    }
-
-    private void BrowseDir_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (_instance is null) return;
-        try
-        {
-            using var dialog = new System.Windows.Forms.FolderBrowserDialog
-            {
-                Description = L.T("String.InstanceSettings.DirBrowseHint"),
-                UseDescriptionForTitle = true
-            };
-            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
-            DirOverrideBox.Text = dialog.SelectedPath;
-            DirOverride_OnChanged(sender, e);
-        }
-        catch (Exception ex)
-        {
-            Log.Warn("Instance", "Browse dir failed: " + ex.Message);
-        }
-    }
-
-    /// <summary>新建一个实例文件夹（名称 + 路径，路径支持相对 / 绝对）。</summary>
-    private void NewFolder_OnClick(object sender, RoutedEventArgs e)
-    {
-        var window = new Window
-        {
-            Title = L.T("String.InstanceSettings.FolderNew"),
-            Width = 520, Height = 300,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            ResizeMode = ResizeMode.NoResize,
-            Owner = Window.GetWindow(this),
-            Background = (System.Windows.Media.Brush)FindResource("Brush.Window")
-        };
-
-        var root = new StackPanel { Margin = new Thickness(20) };
-        root.Children.Add(new TextBlock
-        {
-            Text = L.T("String.InstanceSettings.FolderNewHint"),
-            TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 14),
-            Foreground = (System.Windows.Media.Brush)FindResource("Brush.ForegroundSecondary")
-        });
-
-        root.Children.Add(new TextBlock { Text = L.T("String.InstanceSettings.FolderName"), Margin = new Thickness(0, 0, 0, 6) });
-        var nameBox = new TextBox { Padding = new Thickness(8, 6, 8, 6) };
-        root.Children.Add(nameBox);
-
-        root.Children.Add(new TextBlock { Text = L.T("String.InstanceSettings.FolderPath"), Margin = new Thickness(0, 14, 0, 6) });
-        var pathGrid = new Grid();
-        pathGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        pathGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var pathBox = new TextBox { Padding = new Thickness(8, 6, 8, 6) };
-        var browse = new Button
-        {
-            Content = L.T("String.InstanceSettings.DirBrowse"),
-            Padding = new Thickness(14, 6, 14, 6), Margin = new Thickness(10, 0, 0, 0),
-            Style = (Style)FindResource("Button.Base")
-        };
-        browse.Click += (_, _) =>
-        {
-            try
-            {
-                using var dlg = new System.Windows.Forms.FolderBrowserDialog();
-                if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK) pathBox.Text = dlg.SelectedPath;
-            }
-            catch (Exception ex) { Log.Warn("Instance", "Browse failed: " + ex.Message); }
-        };
-        pathGrid.Children.Add(pathBox);
-        Grid.SetColumn(pathBox, 0);
-        pathGrid.Children.Add(browse);
-        Grid.SetColumn(browse, 1);
-        root.Children.Add(pathGrid);
-
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
-        var ok = new Button { Content = L.T("String.Msg.Common.OK"), Style = (Style)FindResource("Button.Primary"), Padding = new Thickness(18, 7, 18, 7), IsDefault = true };
-        var cancel = new Button { Content = L.T("String.Msg.Common.Cancel"), Style = (Style)FindResource("Button.Base"), Padding = new Thickness(18, 7, 18, 7), Margin = new Thickness(10, 0, 0, 0), IsCancel = true };
-        ok.Click += (_, _) =>
-        {
-            var name = nameBox.Text.Trim();
-            var path = pathBox.Text.Trim();
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(path))
-            {
-                Notice.Info(L.T("String.InstanceSettings.FolderNeedBoth"));
-                return;
-            }
-            var folder = Context.Folders.Create(name, path);
-            Context.Folders.EnsureLayout(folder);
-            window.DialogResult = true;
-        };
-        buttons.Children.Add(ok);
-        buttons.Children.Add(cancel);
-        root.Children.Add(buttons);
-        window.Content = root;
-
-        if (window.ShowDialog() == true && _instance is not null)
-        {
-            LoadFolderSection();
-            if (FolderCombo.Items.Count > 1) FolderCombo.SelectedIndex = FolderCombo.Items.Count - 1;
-        }
-    }
-
-    /// <summary>把该版本的完整文件下载安装到当前实例目录（实例文件夹）里。</summary>
-    private async void InstallToFolder_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (_instance is null) return;
-        var target = Context.WorkingDirectoryFor(_instance);
-        try
-        {
-            InstallToFolderButton.IsEnabled = false;
-            FolderInstallStatus.Text = L.F("String.InstanceSettings.InstallingTo", target);
-            var progress = new Progress<DownloadAggregate>(agg =>
-                FolderInstallStatus.Text = L.F("String.InstanceSettings.CompletingProgress", agg.Completed, agg.Total));
-
-            var count = await App.GameLauncher.CompleteFilesAsync(_instance, progress, CancellationToken.None, target);
-            FolderInstallStatus.Text = count == 0
-                ? L.T("String.InstanceSettings.InstallUpToDate")
-                : L.F("String.InstanceSettings.InstallDone", count, target);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Instance", "Install to folder failed", ex);
-            FolderInstallStatus.Text = L.T("String.Msg.Common.Failed") + ex.Message;
-        }
-        finally
-        {
-            InstallToFolderButton.IsEnabled = true;
-        }
     }
 
     private async void Repair_OnClick(object sender, RoutedEventArgs e)
@@ -536,7 +348,6 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
         var target = tag switch
         {
             "game" => PaneGame,
-            "folder" => PaneFolder,
             "quick" => PaneQuick,
             "mods" => PaneMods,
             "isolation" => PaneIsolation,
@@ -547,7 +358,6 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
         target.Visibility = Visibility.Visible;
 
         if (tag == "mods") LoadMods();
-        if (tag == "folder") LoadFolderSection();
     }
 
     private void SelectSection(string tag)
@@ -564,7 +374,7 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
 
     private Border[] AllPanes() =>
     [
-        PaneOverview, PaneGame, PaneFolder, PaneQuick, PaneMods, PaneIsolation, PaneAdvanced, PaneDiagnostics
+        PaneOverview, PaneGame, PaneQuick, PaneMods, PaneIsolation, PaneAdvanced, PaneDiagnostics
     ];
 
     private static int PriorityIndex(string priority) => priority switch
@@ -774,7 +584,10 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
                 VerifyStatusText.Text = L.F("String.Msg.InstanceSettings.CompletingProgress",
                     agg.Completed, agg.Total));
 
-            var count = await App.GameLauncher.CompleteFilesAsync(_instance, progress);
+            // 补到这个实例真正的工作目录：实例指向自己的文件夹时，
+            // 不能把文件下到共享 .minecraft 里，否则补全完还是缺文件。
+            var count = await App.GameLauncher.CompleteFilesAsync(
+                _instance, progress, CancellationToken.None, Context.WorkingDirectoryFor(_instance));
             VerifyStatusText.Text = count == 0
                 ? L.T("String.Msg.InstanceSettings.AllComplete")
                 : L.F("String.Msg.InstanceSettings.CompleteDone", count);

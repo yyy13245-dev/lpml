@@ -86,8 +86,12 @@ public sealed class GameLaunchService
         IProgress<DownloadAggregate>? progress, CancellationToken token,
         LPML.Core.Download.DownloadTask? task = null)
     {
-        var items = await _ctx.Launcher.BuildRepairItemsAsync(instance.VersionId, token).ConfigureAwait(false);
-        if (items.Count == 0) return 0;
+        // 补全文件要有自己的任务卡。以前走无参 Enqueue，文件进了全局队列，
+        // 任务中心按任务组渲染却是空的——点开就看到一片空白。
+        var ownTask = task is null;
+        var repairTask = task ?? _ctx.Downloads.BeginTask(
+            L.F("String.Task.KindRepairTitle", instance.Name), "repair");
+        if (ownTask) _ctx.Downloads.MarkTaskReady();
 
         EventHandler<DownloadAggregate>? handler = null;
         if (progress is not null)
@@ -98,16 +102,61 @@ public sealed class GameLaunchService
 
         try
         {
-            // 不清空全局队列：启动补全可能和别的安装同时进行
-            if (task is null) _ctx.Downloads.Enqueue(items);
-            else _ctx.Downloads.Enqueue(items, task);
+            var items = await BuildRepairItemsForTargetAsync(instance, token).ConfigureAwait(false);
+            if (items.Count == 0)
+            {
+                // 确实没缺文件也给一张有内容的卡，别留空列表
+                if (ownTask)
+                {
+                    var step = _ctx.Downloads.AddStep(L.T("String.Task.RepairNothingToDo"), repairTask);
+                    step.Status = TaskStepStatus.Done;
+                }
+                return 0;
+            }
+
+            // 不清空全局队列：启动补全可能和别的安装同时进行。
+            // 显式归到自己的任务，避免并发时串到别的任务卡里。
+            _ctx.Downloads.Enqueue(items, repairTask);
             await _ctx.Downloads.RunAsync(token).ConfigureAwait(false);
+            return items.Count;
         }
         finally
         {
             if (handler is not null) _ctx.Downloads.ProgressChanged -= handler;
+            if (ownTask) _ctx.Downloads.MarkFinished(repairTask);
         }
-        return items.Count;
+    }
+
+    /// <summary>
+    /// 列补全清单。目标目录里没有版本 JSON 时（实例指向了新建的文件夹，
+    /// 版本列表却是从共享 .minecraft 读来的），不能就此返回空清单——
+    /// 那会被上层误判成「文件已完整」。先把版本 JSON 拉下来写进目标目录，再重新列。
+    /// </summary>
+    private async Task<List<DownloadItem>> BuildRepairItemsForTargetAsync(
+        GameInstance instance, CancellationToken token)
+    {
+        var items = await _ctx.Launcher.BuildRepairItemsAsync(instance.VersionId, token).ConfigureAwait(false);
+        if (items.Count > 0 || string.IsNullOrWhiteSpace(instance.VersionId)) return items;
+
+        // 目标目录确实有版本 JSON，才算文件齐全
+        if (File.Exists(_ctx.Paths.VersionJsonPath(instance.VersionId))) return items;
+
+        var manifest = await _ctx.ManifestService.GetManifestAsync(token: token).ConfigureAwait(false);
+        var entry = manifest?.Versions.FirstOrDefault(v =>
+            string.Equals(v.Id, instance.VersionId, StringComparison.OrdinalIgnoreCase));
+        if (entry is null)
+        {
+            Log.Warn("Launch", Lang.F("String.Launch.RepairNoManifestEntry", instance.VersionId));
+            return items;
+        }
+
+        var json = await _ctx.ManifestService.FetchVersionJsonAsync(entry, token).ConfigureAwait(false);
+        if (json is null)
+        {
+            Log.Warn("Launch", Lang.F("String.Launch.RepairJsonFailed", instance.VersionId));
+            return items;
+        }
+        return await _ctx.Installer.BuildInstallItemsAsync(json, true, token).ConfigureAwait(false);
     }
 
     // ── 启动 ────────────────────────────────────────────────

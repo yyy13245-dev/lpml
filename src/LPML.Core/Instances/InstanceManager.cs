@@ -191,21 +191,34 @@ public sealed class InstanceManager
         catch (PlatformNotSupportedException) { FileHelper.EnsureDirectory(target); }
     }
 
-    /// <summary>名字是否已存在（用于建实例前查重）。</summary>
-    public bool NameExists(string? name)
+    /// <summary>
+    /// 名字是否已存在（用于建实例前查重）。
+    /// duplicateScopeFolderId 为 null 时查全部（兼容 CLI 等没有文件夹上下文的入口）；
+    /// 非 null（含空串 = 默认 .minecraft）时只在同一个文件夹里查重——
+    /// 不同文件夹是彼此独立的一套游戏目录，允许同名实例。
+    /// </summary>
+    public bool NameExists(string? name, string? duplicateScopeFolderId = null)
     {
         if (string.IsNullOrWhiteSpace(name)) return false;
         var target = name.Trim();
-        return Instances.Any(i => string.Equals(i.Name, target, StringComparison.OrdinalIgnoreCase));
+        if (duplicateScopeFolderId is null)
+            return Instances.Any(i => string.Equals(i.Name, target, StringComparison.OrdinalIgnoreCase));
+        var scope = duplicateScopeFolderId;
+        return Instances.Any(i => string.Equals(i.Name, target, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(i.FolderId ?? "", scope, StringComparison.Ordinal));
     }
 
     /// <summary>
-    /// 建实例。重名时抛 InvalidOperationException（调用方应提示用户改名）。
+    /// 建实例。同一文件夹内重名时抛 InvalidOperationException（调用方应提示用户改名）。
+    /// duplicateScopeFolderId 只决定查重范围，不改变新实例的归属——
+    /// 归属必须由调用方按「文件实际装到哪里」来设置，否则会出现
+    /// 实例挂在新文件夹、文件却还在旧目录的幽灵实例。
     /// </summary>
-    public GameInstance Create(string name, string versionId, bool isolated)
+    public GameInstance Create(string name, string versionId, bool isolated,
+        string? duplicateScopeFolderId = null)
     {
         var finalName = string.IsNullOrWhiteSpace(name) ? versionId : name.Trim();
-        if (NameExists(finalName))
+        if (NameExists(finalName, duplicateScopeFolderId))
             throw new InvalidOperationException(L.F("String.Core.Err.Instance.DuplicateName", finalName));
 
         var instance = new GameInstance

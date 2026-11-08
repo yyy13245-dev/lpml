@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML zh-CN 语言包 · 简体中文 -->
-    <!-- 词条 1378 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1424 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">准备中…</sys:String>
@@ -10,6 +10,7 @@
     <!-- Main -->
     <sys:String x:Key="String.Main.Minimize">最小化</sys:String>
     <sys:String x:Key="String.Main.Maximize">最大化</sys:String>
+    <sys:String x:Key="String.Main.Restart">重新启动</sys:String>
     <sys:String x:Key="String.Main.Close">关闭</sys:String>
     <sys:String x:Key="String.Main.NoAccount">未登录</sys:String>
     <sys:String x:Key="String.Main.OfflineMode">离线模式</sys:String>
@@ -41,7 +42,7 @@
     <sys:String x:Key="String.Account.Delete">删除</sys:String>
     <sys:String x:Key="String.Account.TabMicrosoft">微软登录</sys:String>
     <sys:String x:Key="String.Account.MsTitle">设备代码流登录</sys:String>
-    <sys:String x:Key="String.Account.MsHint">需要你在 Azure 注册应用并开启“允许公共客户端流”，然后把 Client ID 填到这里（遵守微软条款）。</sys:String>
+    <sys:String x:Key="String.Account.MsHint">需自行在 Azure 注册应用（个人 Microsoft 账户 / consumers 租户、开启“允许公共客户端流”），并把 Client ID 填到这里。新注册的应用还需通过 Mojang 的 Minecraft API 审核，否则最后一步会返回 403；这属于微软账号体系的限制，不是本启动器故障。</sys:String>
     <sys:String x:Key="String.Account.MsStart">开始登录</sys:String>
     <sys:String x:Key="String.Account.OpenVerifyPage">打开验证网页</sys:String>
     <sys:String x:Key="String.Account.TabOffline">离线登录</sys:String>
@@ -56,6 +57,7 @@
     <sys:String x:Key="String.Account.EmailOrUser">邮箱 / 用户名</sys:String>
     <sys:String x:Key="String.Account.Password">密码</sys:String>
     <sys:String x:Key="String.Account.Login">登录</sys:String>
+    <sys:String x:Key="String.Account.AddHint">在左侧选择登录方式以添加账户，或对已有账户进行设置。</sys:String>
     <sys:String x:Key="String.Account.LittleSkinTitle">LittleSkin 皮肤站</sys:String>
     <sys:String x:Key="String.Account.LittleSkinHint">使用 LittleSkin 官方 Yggdrasil API 登录，启动器会自动注入皮肤。</sys:String>
     <sys:String x:Key="String.Account.Server">服务器</sys:String>
@@ -73,7 +75,7 @@
     <sys:String x:Key="String.Download.All">全部</sys:String>
     <sys:String x:Key="String.Download.DownloadAssets">下载资源文件</sys:String>
     <sys:String x:Key="String.Download.CreateInstance">完成后创建实例</sys:String>
-    <sys:String x:Key="String.Download.InstallSelected">安装选中版本</sys:String>
+    <sys:String x:Key="String.Download.InstallSelected">打开安装页</sys:String>
     <sys:String x:Key="String.Download.TabLoader">加载器</sys:String>
     <sys:String x:Key="String.Download.GameVersion">游戏版本</sys:String>
     <sys:String x:Key="String.Download.Loader">加载器</sys:String>
@@ -386,7 +388,7 @@
     <sys:String x:Key="String.Msg.Play.InstanceSummary">{0} · {1} · 已玩 {2} 次</sys:String>
     <sys:String x:Key="String.Msg.Play.NoInstance">未选择实例</sys:String>
     <sys:String x:Key="String.Msg.Play.CreateInstanceHint">请到「实例」页面创建一个实例</sys:String>
-    <sys:String x:Key="String.Msg.Play.SelectInstanceFirst">请先选择一个实例（「实例」页面 → 新建实例）。</sys:String>
+    <sys:String x:Key="String.Msg.Play.SelectInstanceFirst">请先选择一个实例（请到「下载中心」安装游戏并创建实例）。</sys:String>
     <sys:String x:Key="String.Msg.Play.AddAccountFirst">请先添加一个账户（「账户」页面）。</sys:String>
     <sys:String x:Key="String.Msg.Play.CheckingFiles">检查游戏文件…</sys:String>
     <sys:String x:Key="String.Msg.Play.MissingFiles">缺少 {0} 个文件，正在补全…</sys:String>
@@ -938,6 +940,9 @@
     <sys:String x:Key="String.Multi.Subtitle">基于陶瓦联机（Terracotta / EasyTier）的 P2P 联机，与 HMCL、PCL CE 等启动器互通。</sys:String>
     <sys:String x:Key="String.Multi.CoreTitle">联机核心</sys:String>
     <sys:String x:Key="String.Multi.CoreSubtitle">默认路线会自动下载官方发行包（国内镜像优先），无需手动填写地址。</sys:String>
+    <sys:String x:Key="String.Multi.CoreStarting">核心启动中…</sys:String>
+    <sys:String x:Key="String.Multi.CoreStartingHint">首次打开联机功能，正在唤醒陶瓦联机核心</sys:String>
+    <sys:String x:Key="String.Multi.Err.WarmFailed">联机核心启动失败：{0}</sys:String>
     <sys:String x:Key="String.Multi.StatusUnknown">状态未知</sys:String>
     <sys:String x:Key="String.Multi.NotInstalled">未安装</sys:String>
     <sys:String x:Key="String.Multi.Installed">已安装</sys:String>
@@ -969,10 +974,10 @@
     <sys:String x:Key="String.Multi.NoInstance">还没有实例，请先到“游戏”页新建。</sys:String>
     <sys:String x:Key="String.Multi.Launching">正在启动…</sys:String>
     <sys:String x:Key="String.Multi.LaunchSuccess">已启动：{0}</sys:String>
-    <sys:String x:Key="String.Multi.DetectingPort">正在监听游戏日志；也可以在游戏里按 Esc →「对局域网开放」……</sys:String>
-    <sys:String x:Key="String.Multi.PortDetected">已检测到：{0}</sys:String>
+    <sys:String x:Key="String.Multi.DetectingPort">正在监听游戏日志识别端口；也可以在游戏里按 Esc →「对局域网开放」……</sys:String>
+    <sys:String x:Key="String.Multi.PortDetected">已识别端口：{0}（可手动修改）</sys:String>
     <sys:String x:Key="String.Multi.StepAddress">创建房间</sys:String>
-    <sys:String x:Key="String.Multi.StepAddressHint">先在左边启动实例，并在游戏里按 Esc →「对局域网开放」；陶瓦会自动扫描端口。点下面按钮创建房间。</sys:String>
+    <sys:String x:Key="String.Multi.StepAddressHint">先在左边启动实例，并在游戏里按 Esc →「对局域网开放」；端口会从游戏日志自动识别，也可以自己填。点下面按钮创建房间。</sys:String>
     <sys:String x:Key="String.Multi.LocalShareIp">局域网 IP:端口</sys:String>
     <sys:String x:Key="String.Multi.Port">端口</sys:String>
     <sys:String x:Key="String.Multi.FillDetected">填入检测到的</sys:String>
@@ -988,7 +993,7 @@
     <sys:String x:Key="String.Multi.Err.Canceled">已取消</sys:String>
     <sys:String x:Key="String.Multi.Err.AddressEmpty">请先填写局域网共享地址。</sys:String>
     <sys:String x:Key="String.Multi.Err.AddressInvalid">地址格式不对，应为 IP:端口，例如 192.168.1.10:59234。</sys:String>
-    <sys:String x:Key="String.Multi.Err.NoDetectionYet">还没有检测到端口，请先在游戏里“对局域网开放”。</sys:String>
+    <sys:String x:Key="String.Multi.Err.NoDetectionYet">还没从游戏日志里识别到端口，请先在游戏里「对局域网开放」，或手动填写端口。</sys:String>
     <sys:String x:Key="String.Multi.Err.LaunchFailed">游戏启动失败。</sys:String>
     <sys:String x:Key="String.Multi.Err.LaunchFailedDetail">游戏启动失败：{0}</sys:String>
     <sys:String x:Key="String.Multi.Back">返回</sys:String>
@@ -1102,7 +1107,7 @@
     <sys:String x:Key="String.Install.LoadingLoader">正在获取加载器版本…</sys:String>
     <sys:String x:Key="String.Install.NoLoaderVersion">该版本没有可用的加载器版本。</sys:String>
     <sys:String x:Key="String.Install.VanillaHint">原版：直接安装游戏本体。</sys:String>
-    <sys:String x:Key="String.Download.ClickHint">也可以双击版本进入安装页</sys:String>
+    <sys:String x:Key="String.Download.ClickHint">双击列表中的条目进入安装页，在那里选择名称、加载器、文件夹并开始安装。</sys:String>
     <sys:String x:Key="String.Core.Err.Ssl">网络连接被安全证书拦下了。常见原因：系统时间不对、网络有代理/防火墙拦截，或镜像源证书过期。可以先到「设置 → 下载源」换个镜像试试。</sys:String>
     <sys:String x:Key="String.Settings.IgnoreCertErrors">忽略证书错误（不安全）</sys:String>
     <sys:String x:Key="String.Settings.IgnoreCertErrorsHint">镜像源证书有问题时打开它才能下载。只建议临时用。</sys:String>
@@ -1133,7 +1138,7 @@
     <sys:String x:Key="String.Download.NoPackFound">没搜到整合包，换个关键词试试。</sys:String>
     <sys:String x:Key="String.Download.PackFound">找到 {0} 个整合包</sys:String>
     <sys:String x:Key="String.Download.PackSearchFailed">搜索失败：</sys:String>
-    <sys:String x:Key="String.Download.InstallOnlinePack">安装所选整合包</sys:String>
+    <sys:String x:Key="String.Download.InstallOnlinePack">打开整合包安装页</sys:String>
     <sys:String x:Key="String.Download.PackPreparing">正在准备「{0}」…</sys:String>
     <sys:String x:Key="String.Download.PackDownloading">正在下载「{0}」…</sys:String>
     <sys:String x:Key="String.Download.PackDownloadFailed">整合包文件下载失败。</sys:String>
@@ -1407,8 +1412,9 @@
     <sys:String x:Key="String.Cli.Agreement.Accepted">已记录你的同意（协议版本 {0}）。</sys:String>
     <sys:String x:Key="String.Cli.Agreement.Declined">未同意用户协议，命令行已退出。</sys:String>
     <sys:String x:Key="String.Cli.HintOnly">输入 help 查看全部命令</sys:String>
-    <sys:String x:Key="String.Cli.HelpMore">不带选项进入命令行后，输入 help 可查看全部命令。</sys:String>
-    <sys:String x:Key="String.Cli.FullHelp">全部命令（不区分大小写；输入 help 可随时查看）&#x0A;  基础   help / ls / status / clear / quit / games&#x0A;  实例   instance info|create|rename|delete -y|clone|select|dir&#x0A;         mods &lt;实例&gt; · mod enable|disable|remove &lt;实例&gt; &lt;关键字&gt;&#x0A;  账户   accounts · account add|remove|select|refresh&#x0A;  版本   versions · version list|install &lt;ID&gt; · modpack info &lt;路径&gt;&#x0A;  在线   mod search &lt;关键词&gt; · mod install &lt;实例&gt; &lt;slug&gt; [MC版本]&#x0A;  下载   download status|tasks|pause|resume|retry|cancel|clear&#x0A;  运行   launch [实例] [-a 账户] [-v 版本] · stop / kill&#x0A;  Java   javas · java scan|add|remove &lt;路径&gt;|list&#x0A;  设置   config show|get|set · language · theme · perf · mirror · paths&#x0A;  文档   doc [名称] · agreement · disclaimer · about · log · mp status&#x0A;  其他   游戏运行中未识别的输入转发给游戏进程</sys:String>
+    <sys:String x:Key="String.Cli.HelpMore">以下为完整命令表；&lt;必填&gt; 与 [可选] 为标准参数记法，| 表示可选值。</sys:String>
+    <sys:String x:Key="String.Cli.FullHelp">完整命令表由程序内建的中英双语常量逐行输出。</sys:String>
+<sys:String x:Key="String.Cli.HelpDone">命令表已全部输出，可直接输入命令</sys:String>
     <sys:String x:Key="String.Cli.CmdNeedArgs">用法：{0}</sys:String>
     <sys:String x:Key="String.Cli.CmdFailed">操作失败：{0}</sys:String>
     <sys:String x:Key="String.Cli.CmdNotFound">没有找到：{0}</sys:String>
@@ -1458,7 +1464,7 @@
     <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · 界面语言 {0}&#x0A;第三方、非官方 Minecraft Java 版启动器，与 Mojang / Microsoft 无关联。&#x0A;源代码、界面文案与文档主要由 AI 辅助生成，按「现状」提供，风险自担。&#x0A;协议版本 {1} · 完整免责声明见 DISCLAIMER.md&#x0A;GPL-3.0-or-later · 版权与署名见 NOTICE · 本软件不提供任何担保</sys:String>
     <sys:String x:Key="String.Multi.Copyright">Terracotta | 陶瓦联机 © Burning_TNT 及贡献者 · AGPL-3.0-or-later（含例外条款）；基于 EasyTier。本启动器通过本地 HTTP API 与未经修改的官方程序交互。</sys:String>
     <sys:String x:Key="String.Multi.HmclCompat">邀请码与 HMCL / PCL CE / FCL 使用同一套 U/XXXX-XXXX-XXXX-XXXX 码制，可以直接互连。</sys:String>
-    <sys:String x:Key="String.Multi.HmclNotice">HMCL 官方多人联机页面当前标注为「维护状态」；能否连通取决于对方版本与网络，本启动器不保证互通成功率。</sys:String>
+    <sys:String x:Key="String.Multi.HmclNotice">能否连通取决于对方启动器的版本与网络环境，本启动器不保证联机成功率。</sys:String>
     <sys:String x:Key="String.Multi.DefaultRoute">默认路线：v{0} · {1} · 国内镜像优先</sys:String>
     <sys:String x:Key="String.Multi.DefaultRouteHint">无需手动配置，点「下载联机核心」即可启用；也可以在「配置」里换成自己的地址。</sys:String>
     <sys:String x:Key="String.Multi.StateWaiting">待机</sys:String>
@@ -1504,4 +1510,45 @@
     <sys:String x:Key="String.About.LegalTitle">许可与法律通知</sys:String>
     <sys:String x:Key="String.About.LegalBody">本软件依 GNU GPL-3.0-or-later 授权，按「现状」提供，不提供任何担保。&#x0A;版权与贡献者署名集中写在程序目录下的 NOTICE 文件，完整许可文本见 LICENSE。&#x0A;你可以自由复制、修改与分发；分发时须保留这些声明并以同一许可提供对应源码。</sys:String>
     <sys:String x:Key="String.About.ViewLicense">查看 LICENSE 与 NOTICE</sys:String>
+    <!-- 文件夹页 / 补全文件任务卡 -->
+    <sys:String x:Key="String.Nav.Folders">文件夹</sys:String>
+    <sys:String x:Key="String.Folder.Title">实例文件夹</sys:String>
+    <sys:String x:Key="String.Folder.Subtitle">每个文件夹都是一套独立的游戏目录；选中的文件夹决定当前能看到哪些实例。</sys:String>
+    <sys:String x:Key="String.Folder.DetailTitle">文件夹详情</sys:String>
+    <sys:String x:Key="String.Folder.Current">● 当前</sys:String>
+    <sys:String x:Key="String.Folder.PathLabel">物理路径</sys:String>
+    <sys:String x:Key="String.Folder.SetCurrent">设为当前文件夹</sys:String>
+    <sys:String x:Key="String.Folder.SetCurrentDone">已切换到「{0}」，实例列表与下载中心已同步。</sys:String>
+    <sys:String x:Key="String.Folder.InstanceCount">该文件夹里的实例：{0} 个</sys:String>
+    <sys:String x:Key="String.Folder.VersionCount">该目录里已安装的版本：{0} 个（按实际文件扫描）</sys:String>
+    <sys:String x:Key="String.Folder.Delete">删除文件夹</sys:String>
+    <sys:String x:Key="String.Folder.OpenDir">打开目录</sys:String>
+    <sys:String x:Key="String.Folder.CannotDeleteDefault">默认文件夹不能删除。</sys:String>
+    <sys:String x:Key="String.Folder.CannotDeleteHasInstances">这个文件夹里还有 {0} 个实例，请先移走或删除这些实例。</sys:String>
+    <sys:String x:Key="String.Folder.ConfirmDelete">只移除「{0}」的登记，不会删除磁盘上的文件。确定吗？</sys:String>
+    <sys:String x:Key="String.Folder.NeedInstance">请先在这个文件夹里安装游戏或新建实例，再选中一个实例。</sys:String>
+    <sys:String x:Key="String.Task.KindRepair">补全文件</sys:String>
+    <sys:String x:Key="String.Task.KindRepairTitle">补全游戏文件 · {0}</sys:String>
+    <sys:String x:Key="String.Task.RepairCardHint">补齐缺失的 jar / 依赖库 / 资源文件</sys:String>
+    <sys:String x:Key="String.Task.RepairNothingToDo">检查完成，文件齐全</sys:String>
+    <sys:String x:Key="String.Multi.PortManualHint">端口（自动从游戏日志识别，识别错了可以直接改）</sys:String>
+    <sys:String x:Key="String.Multi.Err.PortInvalid">端口须为 1~65535 之间的数字。</sys:String>
+    <sys:String x:Key="String.Multi.Err.DaemonExited">联机核心启动后立即退出，未重复拉起进程；详情见日志。</sys:String>
+    <sys:String x:Key="String.Multi.Room.TitleHost">房间已创建</sys:String>
+    <sys:String x:Key="String.Multi.Room.TitleGuest">已加入房间</sys:String>
+    <sys:String x:Key="String.Multi.Room.HintHost">把邀请码发给朋友；关闭房间会结束联机核心。</sys:String>
+    <sys:String x:Key="String.Multi.Room.HintGuest">退出房间会结束联机核心，返回联机入口。</sys:String>
+    <sys:String x:Key="String.Multi.Room.ActionHost">关闭房间或返回都会结束本次联机。</sys:String>
+    <sys:String x:Key="String.Multi.Room.ActionGuest">退出房间或返回都会结束本次联机。</sys:String>
+    <sys:String x:Key="String.Multi.Room.CloseRoom">关闭房间</sys:String>
+    <sys:String x:Key="String.Multi.Room.LeaveRoom">退出房间</sys:String>
+    <sys:String x:Key="String.Multi.Room.PeersLabel">房间成员</sys:String>
+    <sys:String x:Key="String.Multi.Room.GuestUrl">连接地址</sys:String>
+    <sys:String x:Key="String.Multi.Room.WaitingCode">正在生成邀请码…</sys:String>
+    <sys:String x:Key="String.Multi.Room.BrowserHint">若陶瓦联机核心已自动打开浏览器页面，您可继续在本页操作，也可在该浏览器页面中完成相同操作；两处状态保持同步。</sys:String>
+    <sys:String x:Key="String.Multi.RestartCore">尝试重新启动联机核心</sys:String>
+    <sys:String x:Key="String.Multi.RestartingCore">正在重新启动联机核心…</sys:String>
+    <sys:String x:Key="String.Multi.RestartCoreOk">联机核心已重新启动，请重试刚才的操作。</sys:String>
+    <sys:String x:Key="String.Multi.RestartCoreHint">仅重启本启动器拉起的核心；若正在复用其他启动器已运行的核心，只会重新探测，不会结束它。</sys:String>
+    <sys:String x:Key="String.Multi.Err.RestartFailed">重新启动联机核心失败：{0}</sys:String>
 </ResourceDictionary>

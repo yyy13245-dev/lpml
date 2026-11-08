@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Auth;
@@ -82,9 +82,10 @@ public partial class PlayPage : UserControl, IRefreshablePage
         // ItemsSource 指向同一个 List 引用时 WPF 不会刷新，新装好的实例就一直看不到：
         // 先置 null 再给一份新列表，强制重建下拉项。
         InstanceCombo.ItemsSource = null;
-        var instances = Context.Instances.Instances.ToList();
+        var instances = Context.InstancesInCurrentFolder();
         InstanceCombo.ItemsSource = instances;
         var selected = Context.Instances.Find(Context.Settings.SelectedInstanceId) ?? instances.FirstOrDefault();
+        if (selected is not null && !Context.IsInCurrentFolder(selected)) selected = instances.FirstOrDefault();
         if (selected is not null) InstanceCombo.SelectedItem = selected;
 
         GameDirText.Text = Context.Paths.GameDirectory;

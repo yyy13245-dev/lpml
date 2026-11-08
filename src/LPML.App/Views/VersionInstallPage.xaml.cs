@@ -39,7 +39,10 @@ public partial class VersionInstallPage : UserControl
         var folders = new List<InstanceFolder> { new() { Id = "", Name = T("String.InstanceSettings.FolderDefault") } };
         folders.AddRange(Context.Folders.Folders);
         FolderCombo.ItemsSource = folders;
-        FolderCombo.SelectedIndex = 0;
+        // 默认跟随「文件夹」页里选中的当前文件夹，不用每次都手动切回去
+        var current = Context.CurrentFolderId;
+        FolderCombo.SelectedItem = folders.FirstOrDefault(f => string.Equals(f.Id, current, StringComparison.Ordinal))
+                                   ?? folders[0];
     }
 
     private void Back_OnClick(object sender, RoutedEventArgs e)
@@ -174,7 +177,9 @@ public partial class VersionInstallPage : UserControl
 
             if (CreateInstanceCheck.IsChecked == true)
             {
-                var instance = Context.Instances.Create(name, finalVersionId, Context.Settings.Paths.InstanceIsolation);
+                // 查重只在同一文件夹内做：新文件夹里没有这个名字就不该被旧文件夹挡住。
+                var instance = Context.Instances.Create(name, finalVersionId,
+                    Context.Settings.Paths.InstanceIsolation, targetFolder?.Id ?? "");
                 if (!isVanilla) instance.LoaderName = kind;
                 if (targetFolder is not null && !string.IsNullOrEmpty(targetFolder.Id))
                 {

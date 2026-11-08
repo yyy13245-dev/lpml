@@ -56,7 +56,6 @@
                     </ListBox>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,14,0,0">
-                        <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Instance.New}" Padding="18,9" Click="Create_OnClick"/>
                         <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Instance.Copy}" Margin="8,0,0,0" Padding="18,9" Click="Clone_OnClick"/>
                         <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Instance.Delete}" Margin="8,0,0,0" Padding="18,9" Click="Delete_OnClick"/>
                         <Button Style="{StaticResource Button.Base}" Content="{DynamicResource String.Instance.OpenDir}" Margin="8,0,0,0" Padding="18,9" Click="OpenDir_OnClick"/>
@@ -68,7 +67,7 @@
         <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- 选中实例的完整设置入口 -->
-                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="{DynamicResource String.Instance.Settings}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,8"/>
                         <TextBlock Text="{DynamicResource String.Instance.SettingsHint}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,14"/>
@@ -77,20 +76,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 新建实例 -->
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource String.Instance.NewTitle}" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,12"/>
-                        <TextBlock Text="{DynamicResource String.Instance.Name}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
-                        <TextBox x:Name="NewNameBox"/>
-                        <TextBlock Text="{DynamicResource String.Instance.GameVersion}" Style="{StaticResource Text.Caption}" Margin="0,12,0,6"/>
-                        <ComboBox x:Name="NewVersionCombo"/>
-                        <CheckBox x:Name="IsolationCheck" Style="{StaticResource Switch}" Content="{DynamicResource String.Instance.Isolate}"
-                                  IsChecked="True" Margin="0,14,0,0"/>
-                        <Button Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Instance.Create}" Margin="0,14,0,0" Padding="20,9"
-                                HorizontalAlignment="Left" Click="Create_OnClick"/>
-                    </StackPanel>
-                </Border>
             </StackPanel>
         </ScrollViewer>
     </Grid>

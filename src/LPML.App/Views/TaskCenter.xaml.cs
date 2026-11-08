@@ -11,6 +11,19 @@ using LPML.Core.Utils;
 namespace LPML.App.Views;
 
 /// <summary>
+/// 按任务类型挑卡片：补全文件用自己的「补全文件任务卡」，
+/// 安装游戏 / 整合包 / 模组等继续沿用原来那张卡，一个字节都不改。
+/// </summary>
+public sealed class TaskCardTemplateSelector : DataTemplateSelector
+{
+    public override DataTemplate? SelectTemplate(object item, DependencyObject container)
+    {
+        var key = item is DownloadTask { Kind: "repair" } ? "RepairTaskCard" : "GameTaskCard";
+        return (container as FrameworkElement)?.TryFindResource(key) as DataTemplate;
+    }
+}
+
+/// <summary>
 /// 任务中心（三级）：
 /// 一级是任务组列表（一次下载 / 一次安装 = 一个任务）；
 /// 二级「下载」按大类汇总（整合包内容 / 原版内容），每类一个独立进度条；

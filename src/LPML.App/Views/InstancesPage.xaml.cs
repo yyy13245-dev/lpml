@@ -1,4 +1,4 @@
-using LPML.App.Services;
+﻿using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Instances;
 using System.Diagnostics;
@@ -23,13 +23,7 @@ public partial class InstancesPage : UserControl, IRefreshablePage
     public void Refresh()
     {
         InstanceList.ItemsSource = null;
-        InstanceList.ItemsSource = Context.Instances.Instances;
-
-        NewVersionCombo.Items.Clear();
-        foreach (var version in Context.InstalledVersions()) NewVersionCombo.Items.Add(version);
-        if (NewVersionCombo.Items.Count > 0) NewVersionCombo.SelectedIndex = 0;
-
-        IsolationCheck.IsChecked = Context.Settings.Paths.InstanceIsolation;
+        InstanceList.ItemsSource = Context.InstancesInCurrentFolder();
 
         if (Context.Instances.Instances.Count > 0 && InstanceList.SelectedIndex < 0)
             InstanceList.SelectedIndex = 0;
@@ -63,28 +57,11 @@ public partial class InstancesPage : UserControl, IRefreshablePage
     private void OpenInstanceSettings(MainWindow? window)
     {
         if (Current is null || window is null) return;
-        window.Navigate("instancesettings");
-        if (window.FindPage("instancesettings") is InstanceSettingsPage page)
-            page.SetInstance(Current);
+        // 双击与侧栏「实例设置」走同一入口，避免一个显示单实例、一个显示全局
+        window.ShowInstanceSettings(Current);
     }
 
     
-    private void Create_OnClick(object sender, RoutedEventArgs e)
-    {
-        var version = NewVersionCombo.SelectedItem?.ToString();
-        if (string.IsNullOrEmpty(version))
-        {
-            Notice.Info(Lang.T("String.Msg.Instance.NeedVersion"));
-            return;
-        }
-        var name = string.IsNullOrWhiteSpace(NewNameBox.Text) ? version : NewNameBox.Text.Trim();
-        var instance = Context.Instances.Create(name, version, IsolationCheck.IsChecked == true);
-        Context.Settings.SelectedInstanceId = instance.Id;
-        Context.Save();
-        Refresh();
-        InstanceList.SelectedItem = instance;
-    }
-
     private void Clone_OnClick(object sender, RoutedEventArgs e)
     {
         if (Current is null) return;

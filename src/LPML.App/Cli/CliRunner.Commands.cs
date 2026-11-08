@@ -15,7 +15,7 @@ namespace LPML.App.Cli;
 
 /// <summary>
 /// 命令行命令表。与 GUI 共用同一套 Core 服务，不带任何界面依赖。
-/// 命令语法与完整说明统一放在词条 String.Cli.FullHelp 里，底部常驻提示只保留 help。
+/// 命令表放在 CliRunner.Help.cs（中英两份 C# 常量，避开 XAML 空白折叠），只通过 help 一次性输出；底部常驻提示只保留 help。
 /// </summary>
 public sealed partial class CliRunner
 {
@@ -134,12 +134,14 @@ public sealed partial class CliRunner
         }
     }
 
-    /// <summary>完整命令表只在这里输出，底部常驻行不再罗列命令。</summary>
+    /// <summary>help 一次性输出完整命令表：不分页、不截断、不附加任何引导语。</summary>
     private void PrintFullHelp()
     {
-        var text = Lang.T("String.Cli.FullHelp").Replace("\r\n", "\n");
-        foreach (var line in text.Split('\n')) _output(line);
-        _output(Lang.T("String.Cli.HintOnly"));
+        var lines = HelpTable(_ctx.Settings.Language);
+
+        // REPL 下走全量普通输出（可回滚查看），其余模式逐行写控制台。
+        if (_transcript is not null) _transcript(lines);
+        else foreach (var line in lines) _output(line);
     }
 
     // ── 实例 ─────────────────────────────────────────────

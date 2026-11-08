@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using LPML.Core;
 using LPML.Core.Download;
@@ -116,7 +116,7 @@ public partial class ModpackInstallPage : UserControl
     private void NameBox_OnTextChanged(object sender, TextChangedEventArgs e)
     {
         if (!_ready || NameWarning is null) return;
-        NameWarning.Text = Context.Instances.NameExists(NameBox.Text)
+        NameWarning.Text = Context.Instances.NameExists(NameBox.Text, Context.CurrentFolderId)
             ? T("String.Modpack.NameDuplicate")
             : "";
     }
@@ -126,7 +126,7 @@ public partial class ModpackInstallPage : UserControl
         var name = NameBox.Text.Trim();
 
         // 名称查重
-        if (Context.Instances.NameExists(name))
+        if (Context.Instances.NameExists(name, Context.CurrentFolderId))
         {
             Notice.Warn(T("String.Modpack.NameDuplicate"));
             return;
@@ -144,7 +144,8 @@ public partial class ModpackInstallPage : UserControl
             ConfirmButton.IsEnabled = false;
             StatusText.Text = F("String.Download.PackPreparing", _project.Title);
 
-            var created = Context.Instances.Create(name, "", isolated: true);
+            var created = Context.Instances.Create(name, "", isolated: true,
+                duplicateScopeFolderId: Context.CurrentFolderId);
             var targetDirectory = Context.Instances.InstanceDirectory(created);
 
             // 整合包会分多批下载（本体包 → 原版 JSON/库 → 模组），

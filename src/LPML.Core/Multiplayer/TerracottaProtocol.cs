@@ -109,6 +109,9 @@ public static class TerracottaRoomCode
 /// <summary>当前平台对应的陶瓦发行包 classifier，与 HMCL terracotta.json 的键名一致。</summary>
 public static class TerracottaPlatform
 {
+    /// <summary>官方发行包的 web server 固定监听 127.0.0.1:8000。</summary>
+    public const int DefaultApiPort = 8000;
+
     public static string Classifier()
     {
         // 用字符串比较而不是枚举常量，避免不同 .NET 版本枚举成员差异影响编译。
@@ -135,7 +138,7 @@ public static class TerracottaPlatform
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "terracotta")
             : Path.Combine(Path.GetTempPath(), "terracotta");
 
-    /// <summary>锁文件：2 字节大端端口号。--hmcl 模式下由陶瓦写入，多个进程共享同一端口。</summary>
+    /// <summary>锁文件：2 字节大端端口号，由陶瓦写入，多个进程共享同一端口。</summary>
     public static string LockFilePath => Path.Combine(DataDirectory(), "terracotta.lock");
 
     /// <summary>发行包内的可执行文件名（HMCL terracotta.json 的 files 键名）。</summary>
@@ -257,7 +260,9 @@ public enum TerracottaStateKind
     GuestConnecting,
     GuestStarting,
     GuestOk,
-    Exception
+    Exception,
+    /// <summary>本地状态：正在拉起陶瓦进程并等待本地服务就绪（不由 /state 上报）。</summary>
+    CoreStarting
 }
 
 /// <summary>一次 /state 轮询的快照。</summary>
@@ -319,7 +324,13 @@ public static class TerracottaStateParser
 
     private static TerracottaStateKind ParseKind(string raw) => raw switch
     {
+        // 官方 v0.4.2 的 /state 实际返回这四个值；以前只认带连字符的分支，
+        // 于是 hosting / guesting 全被解析成 Unknown，房间码和地址永远读不到。
         "waiting" => TerracottaStateKind.Waiting,
+        "scanning" => TerracottaStateKind.HostScanning,
+        "hosting" => TerracottaStateKind.HostOk,
+        "guesting" => TerracottaStateKind.GuestOk,
+        // 兼容部分第三方分支/旧版本的多阶段状态名
         "host-scanning" => TerracottaStateKind.HostScanning,
         "host-starting" => TerracottaStateKind.HostStarting,
         "host-ok" => TerracottaStateKind.HostOk,

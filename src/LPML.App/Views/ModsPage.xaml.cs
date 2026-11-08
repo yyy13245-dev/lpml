@@ -1,4 +1,4 @@
-using LPML.App.Services;
+﻿using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Instances;
 using LPML.Core.Mods;
@@ -32,7 +32,7 @@ public partial class ModsPage : UserControl, IRefreshablePage
     {
         // 同一个 List 引用不会触发 ComboBox 刷新，新实例就一直看不到
         InstanceCombo.ItemsSource = null;
-        var instances = Context.Instances.Instances.ToList();
+        var instances = Context.InstancesInCurrentFolder();
         InstanceCombo.ItemsSource = instances;
         var selected = Context.Instances.Find(Context.Settings.SelectedInstanceId) ?? instances.FirstOrDefault();
         if (selected is not null) InstanceCombo.SelectedItem = selected;

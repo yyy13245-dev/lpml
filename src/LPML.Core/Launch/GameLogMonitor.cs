@@ -41,6 +41,8 @@ public sealed class GameLogMonitor
     // 端口开放：不同版本 / 不同端（客户端局域网、独立服务器）措辞不同
     private static readonly Regex[] PortPatterns =
     {
+        // 语言无关：各语言版本聊天栏/日志里形如 [ ... 45231 ... ] 的方括号内容
+        new(@"\[[^\[\]\r\n]*?(?<!\d)(?<port>\d{4,5})(?!\d)[^\[\]\r\n]*?\]", RegexOptions.Compiled),
         new(@"Started serving on\s*:?\s*(?<port>\d{1,5})", RegexOptions.IgnoreCase | RegexOptions.Compiled),
         new(@"Opened to LAN on port\s*(?<port>\d{1,5})", RegexOptions.IgnoreCase | RegexOptions.Compiled),
         new(@"Opened server on port\s*(?<port>\d{1,5})", RegexOptions.IgnoreCase | RegexOptions.Compiled),

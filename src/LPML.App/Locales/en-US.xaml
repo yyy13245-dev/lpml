@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML en-US 语言包 · English -->
-    <!-- 词条 1378 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1424 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">Preparing…</sys:String>
@@ -10,6 +10,7 @@
     <!-- Main -->
     <sys:String x:Key="String.Main.Minimize">Minimize</sys:String>
     <sys:String x:Key="String.Main.Maximize">Maximize</sys:String>
+    <sys:String x:Key="String.Main.Restart">Restart launcher</sys:String>
     <sys:String x:Key="String.Main.Close">Close</sys:String>
     <sys:String x:Key="String.Main.NoAccount">Not signed in</sys:String>
     <sys:String x:Key="String.Main.OfflineMode">Offline mode</sys:String>
@@ -41,7 +42,7 @@
     <sys:String x:Key="String.Account.Delete">Delete</sys:String>
     <sys:String x:Key="String.Account.TabMicrosoft">Microsoft</sys:String>
     <sys:String x:Key="String.Account.MsTitle">Device code flow</sys:String>
-    <sys:String x:Key="String.Account.MsHint">Register an app in Azure, enable “Allow public client flows”, then paste its Client ID here (per Microsoft’s terms).</sys:String>
+    <sys:String x:Key="String.Account.MsHint">Register your own Azure app (personal Microsoft accounts / consumers tenant, “Allow public client flows” enabled) and paste its Client ID here. Newly registered apps must also be approved by Mojang for the Minecraft API, or the final step returns 403; this is a Microsoft account requirement, not a launcher fault.</sys:String>
     <sys:String x:Key="String.Account.MsStart">Sign in</sys:String>
     <sys:String x:Key="String.Account.OpenVerifyPage">Open verification page</sys:String>
     <sys:String x:Key="String.Account.TabOffline">Offline</sys:String>
@@ -56,6 +57,7 @@
     <sys:String x:Key="String.Account.EmailOrUser">Email / username</sys:String>
     <sys:String x:Key="String.Account.Password">Password</sys:String>
     <sys:String x:Key="String.Account.Login">Sign in</sys:String>
+    <sys:String x:Key="String.Account.AddHint">Choose a sign-in method on the left to add an account or adjust its settings.</sys:String>
     <sys:String x:Key="String.Account.LittleSkinTitle">LittleSkin</sys:String>
     <sys:String x:Key="String.Account.LittleSkinHint">Sign in through the official LittleSkin Yggdrasil API; skins are injected automatically.</sys:String>
     <sys:String x:Key="String.Account.Server">Server</sys:String>
@@ -73,7 +75,7 @@
     <sys:String x:Key="String.Download.All">All</sys:String>
     <sys:String x:Key="String.Download.DownloadAssets">Download assets</sys:String>
     <sys:String x:Key="String.Download.CreateInstance">Create an instance when done</sys:String>
-    <sys:String x:Key="String.Download.InstallSelected">Install selected version</sys:String>
+    <sys:String x:Key="String.Download.InstallSelected">Open install page</sys:String>
     <sys:String x:Key="String.Download.TabLoader">Loaders</sys:String>
     <sys:String x:Key="String.Download.GameVersion">Game version</sys:String>
     <sys:String x:Key="String.Download.Loader">Loader</sys:String>
@@ -386,7 +388,7 @@
     <sys:String x:Key="String.Msg.Play.InstanceSummary">{0} · {1} · played {2} times</sys:String>
     <sys:String x:Key="String.Msg.Play.NoInstance">No instance selected</sys:String>
     <sys:String x:Key="String.Msg.Play.CreateInstanceHint">Create one on the Instances page</sys:String>
-    <sys:String x:Key="String.Msg.Play.SelectInstanceFirst">Select an instance first (Instances → New instance).</sys:String>
+    <sys:String x:Key="String.Msg.Play.SelectInstanceFirst">Select an instance first (install a game and create an instance in Download Center).</sys:String>
     <sys:String x:Key="String.Msg.Play.AddAccountFirst">Add an account first (Accounts page).</sys:String>
     <sys:String x:Key="String.Msg.Play.CheckingFiles">Checking game files…</sys:String>
     <sys:String x:Key="String.Msg.Play.MissingFiles">{0} files missing — downloading them now…</sys:String>
@@ -938,6 +940,9 @@ Put the jars you download into:
     <sys:String x:Key="String.Multi.Subtitle">P2P multiplayer powered by Terracotta / EasyTier; interoperable with HMCL, PCL CE and other launchers.</sys:String>
     <sys:String x:Key="String.Multi.CoreTitle">Multiplayer core</sys:String>
     <sys:String x:Key="String.Multi.CoreSubtitle">The default route downloads the official bundle automatically (CN mirrors first); no manual URL needed.</sys:String>
+    <sys:String x:Key="String.Multi.CoreStarting">Starting core…</sys:String>
+    <sys:String x:Key="String.Multi.CoreStartingHint">Waking up Terracotta on first open…</sys:String>
+    <sys:String x:Key="String.Multi.Err.WarmFailed">Failed to start the multiplayer core: {0}</sys:String>
     <sys:String x:Key="String.Multi.StatusUnknown">Unknown</sys:String>
     <sys:String x:Key="String.Multi.NotInstalled">Not installed</sys:String>
     <sys:String x:Key="String.Multi.Installed">Installed</sys:String>
@@ -969,10 +974,10 @@ Put the jars you download into:
     <sys:String x:Key="String.Multi.NoInstance">No instances yet. Create one on the Game page first.</sys:String>
     <sys:String x:Key="String.Multi.Launching">Launching…</sys:String>
     <sys:String x:Key="String.Multi.LaunchSuccess">Launched: {0}</sys:String>
-    <sys:String x:Key="String.Multi.DetectingPort">Watching the game log; you can also press Esc → "Open to LAN" in game…</sys:String>
-    <sys:String x:Key="String.Multi.PortDetected">Detected: {0}</sys:String>
+    <sys:String x:Key="String.Multi.DetectingPort">Watching the game log for the LAN port; you can also press Esc → "Open to LAN" in game…</sys:String>
+    <sys:String x:Key="String.Multi.PortDetected">Detected port: {0} (you can overwrite it)</sys:String>
     <sys:String x:Key="String.Multi.StepAddress">Create the room</sys:String>
-    <sys:String x:Key="String.Multi.StepAddressHint">Launch an instance on the left, then press Esc → "Open to LAN" in game; Terracotta scans the port automatically. Press the button below.</sys:String>
+    <sys:String x:Key="String.Multi.StepAddressHint">Launch an instance on the left, then press Esc → "Open to LAN" in game. The port is read from the game log and can also be entered manually. Press the button below.</sys:String>
     <sys:String x:Key="String.Multi.LocalShareIp">LAN IP:port</sys:String>
     <sys:String x:Key="String.Multi.Port">Port</sys:String>
     <sys:String x:Key="String.Multi.FillDetected">Fill detected</sys:String>
@@ -988,7 +993,7 @@ Put the jars you download into:
     <sys:String x:Key="String.Multi.Err.Canceled">Cancelled</sys:String>
     <sys:String x:Key="String.Multi.Err.AddressEmpty">Please fill in the LAN shared address first.</sys:String>
     <sys:String x:Key="String.Multi.Err.AddressInvalid">Bad address format, expected IP:port, e.g. 192.168.1.10:59234.</sys:String>
-    <sys:String x:Key="String.Multi.Err.NoDetectionYet">No port detected yet. Open to LAN in-game first.</sys:String>
+    <sys:String x:Key="String.Multi.Err.NoDetectionYet">No port found in the game log yet. Open to LAN in-game first, or enter the port manually.</sys:String>
     <sys:String x:Key="String.Multi.Err.LaunchFailed">Game failed to start.</sys:String>
     <sys:String x:Key="String.Multi.Err.LaunchFailedDetail">Game failed to start: {0}</sys:String>
     <sys:String x:Key="String.Multi.Back">Back</sys:String>
@@ -1102,7 +1107,7 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Install.LoadingLoader">Fetching loader versions…</sys:String>
     <sys:String x:Key="String.Install.NoLoaderVersion">No loader version available for this game version.</sys:String>
     <sys:String x:Key="String.Install.VanillaHint">Vanilla: install the game only.</sys:String>
-    <sys:String x:Key="String.Download.ClickHint">Or double-click a version</sys:String>
+    <sys:String x:Key="String.Download.ClickHint">Double-click an entry to open its install page, where you choose the name, loader, folder and start installing.</sys:String>
     <sys:String x:Key="String.Core.Err.Ssl">The secure connection was blocked. Common causes: wrong system time, a proxy/firewall intercepting traffic, or an expired mirror certificate. Try another mirror in Settings → Download source.</sys:String>
     <sys:String x:Key="String.Settings.IgnoreCertErrors">Ignore certificate errors (unsafe)</sys:String>
     <sys:String x:Key="String.Settings.IgnoreCertErrorsHint">Enable when a mirror's certificate is broken. Temporary use only.</sys:String>
@@ -1133,7 +1138,7 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Download.NoPackFound">No modpack found, try another keyword.</sys:String>
     <sys:String x:Key="String.Download.PackFound">Found {0} modpacks</sys:String>
     <sys:String x:Key="String.Download.PackSearchFailed">Search failed: </sys:String>
-    <sys:String x:Key="String.Download.InstallOnlinePack">Install selected modpack</sys:String>
+    <sys:String x:Key="String.Download.InstallOnlinePack">Open modpack install page</sys:String>
     <sys:String x:Key="String.Download.PackPreparing">Preparing {0}…</sys:String>
     <sys:String x:Key="String.Download.PackDownloading">Downloading {0}…</sys:String>
     <sys:String x:Key="String.Download.PackDownloadFailed">Failed to download the modpack file.</sys:String>
@@ -1407,8 +1412,9 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Cli.Agreement.Accepted">Agreement accepted (version {0}).</sys:String>
     <sys:String x:Key="String.Cli.Agreement.Declined">Agreement not accepted. The CLI will now close.</sys:String>
     <sys:String x:Key="String.Cli.HintOnly">Type help for the full command list</sys:String>
-    <sys:String x:Key="String.Cli.HelpMore">Start the shell with no options, then type help for the full command list.</sys:String>
-    <sys:String x:Key="String.Cli.FullHelp">All commands (case-insensitive; type help any time)&#x0A;  Basics     help / ls / status / clear / quit / games&#x0A;  Instances  instance info|create|rename|delete -y|clone|select|dir&#x0A;             mods &lt;instance&gt; · mod enable|disable|remove &lt;instance&gt; &lt;keyword&gt;&#x0A;  Accounts   accounts · account add|remove|select|refresh&#x0A;  Versions   versions · version list|install &lt;id&gt; · modpack info &lt;path&gt;&#x0A;  Online     mod search &lt;query&gt; · mod install &lt;instance&gt; &lt;slug&gt; [MC version]&#x0A;  Downloads  download status|tasks|pause|resume|retry|cancel|clear&#x0A;  Launch     launch [instance] [-a account] [-v version] · stop / kill&#x0A;  Java       javas · java scan|add|remove &lt;path&gt;|list&#x0A;  Settings   config show|get|set · language · theme · perf · mirror · paths&#x0A;  Docs       doc [name] · agreement · disclaimer · about · log · mp status&#x0A;  Other      Unrecognized input is forwarded to the game while running</sys:String>
+    <sys:String x:Key="String.Cli.HelpMore">The full command table follows; &lt;required&gt; and [optional] use standard notation, | means alternatives.</sys:String>
+    <sys:String x:Key="String.Cli.FullHelp">The full command table is emitted line by line from built-in bilingual constants.</sys:String>
+<sys:String x:Key="String.Cli.HelpDone">Full command table printed; enter a command</sys:String>
     <sys:String x:Key="String.Cli.CmdNeedArgs">Usage: {0}</sys:String>
     <sys:String x:Key="String.Cli.CmdFailed">Operation failed: {0}</sys:String>
     <sys:String x:Key="String.Cli.CmdNotFound">Not found: {0}</sys:String>
@@ -1458,7 +1464,7 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · language {0}&#x0A;A third-party, unofficial Minecraft Java Edition launcher, not affiliated with Mojang or Microsoft.&#x0A;Source, UI text and docs are mostly AI-assisted, provided "as is"; use at your own risk.&#x0A;Agreement version {1} · full disclaimer in DISCLAIMER.md&#x0A;GPL-3.0-or-later · copyright &amp; attribution in NOTICE · provided with ABSOLUTELY NO WARRANTY</sys:String>
     <sys:String x:Key="String.Multi.Copyright">Terracotta © Burning_TNT and contributors · AGPL-3.0-or-later (with exception); built on EasyTier. LPML talks to the unmodified official binary over its local HTTP API.</sys:String>
     <sys:String x:Key="String.Multi.HmclCompat">Invitation codes use the same U/XXXX-XXXX-XXXX-XXXX format as HMCL / PCL CE / FCL, so they can join each other directly.</sys:String>
-    <sys:String x:Key="String.Multi.HmclNotice">HMCL's official multiplayer page is currently marked "under maintenance". Connectivity depends on the other launcher version and network; interoperability is not guaranteed.</sys:String>
+    <sys:String x:Key="String.Multi.HmclNotice">Connectivity depends on the other launcher's version and network conditions; a successful connection is not guaranteed.</sys:String>
     <sys:String x:Key="String.Multi.DefaultRoute">Default route: v{0} · {1} · CN mirrors first</sys:String>
     <sys:String x:Key="String.Multi.DefaultRouteHint">No setup needed — click "Download core". You can override it in Settings.</sys:String>
     <sys:String x:Key="String.Multi.StateWaiting">Idle</sys:String>
@@ -1504,4 +1510,45 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.About.LegalTitle">Licence &amp; legal notices</sys:String>
     <sys:String x:Key="String.About.LegalBody">This software is licensed under GNU GPL-3.0-or-later and provided "as is", with ABSOLUTELY NO WARRANTY.&#x0A;Copyright and contributor attributions are collected in the NOTICE file in the program folder; the full licence text is in LICENSE.&#x0A;You may copy, modify and redistribute it, provided these notices are preserved and the corresponding source is offered under the same licence.</sys:String>
     <sys:String x:Key="String.About.ViewLicense">View LICENSE &amp; NOTICE</sys:String>
+    <!-- Folder page / repair task card -->
+    <sys:String x:Key="String.Nav.Folders">Folders</sys:String>
+    <sys:String x:Key="String.Folder.Title">Instance folders</sys:String>
+    <sys:String x:Key="String.Folder.Subtitle">Each folder is a self-contained game directory. The selected folder decides which instances you see.</sys:String>
+    <sys:String x:Key="String.Folder.DetailTitle">Folder details</sys:String>
+    <sys:String x:Key="String.Folder.Current">● Current</sys:String>
+    <sys:String x:Key="String.Folder.PathLabel">Physical path</sys:String>
+    <sys:String x:Key="String.Folder.SetCurrent">Set as current folder</sys:String>
+    <sys:String x:Key="String.Folder.SetCurrentDone">Switched to "{0}". The instance list and download centre now follow this folder.</sys:String>
+    <sys:String x:Key="String.Folder.InstanceCount">Instances in this folder: {0}</sys:String>
+    <sys:String x:Key="String.Folder.VersionCount">Versions installed here: {0} (scanned from real files)</sys:String>
+    <sys:String x:Key="String.Folder.Delete">Delete folder</sys:String>
+    <sys:String x:Key="String.Folder.OpenDir">Open directory</sys:String>
+    <sys:String x:Key="String.Folder.CannotDeleteDefault">The default folder cannot be deleted.</sys:String>
+    <sys:String x:Key="String.Folder.CannotDeleteHasInstances">This folder still holds {0} instance(s). Move or delete them first.</sys:String>
+    <sys:String x:Key="String.Folder.ConfirmDelete">Only the registration of "{0}" is removed; files on disk stay. Continue?</sys:String>
+    <sys:String x:Key="String.Folder.NeedInstance">Install a game or create an instance in this folder first, then select one.</sys:String>
+    <sys:String x:Key="String.Task.KindRepair">Repair files</sys:String>
+    <sys:String x:Key="String.Task.KindRepairTitle">Complete game files - {0}</sys:String>
+    <sys:String x:Key="String.Task.RepairCardHint">Fetch missing jar / libraries / assets</sys:String>
+    <sys:String x:Key="String.Task.RepairNothingToDo">Check finished - all files intact</sys:String>
+    <sys:String x:Key="String.Multi.PortManualHint">Port (auto-detected from the game log; you can overwrite it)</sys:String>
+    <sys:String x:Key="String.Multi.Err.PortInvalid">Port must be a number between 1 and 65535.</sys:String>
+    <sys:String x:Key="String.Multi.Err.DaemonExited">The multiplayer core exited immediately after launch; no second process was started. See the log for details.</sys:String>
+    <sys:String x:Key="String.Multi.Room.TitleHost">Room created</sys:String>
+    <sys:String x:Key="String.Multi.Room.TitleGuest">Joined room</sys:String>
+    <sys:String x:Key="String.Multi.Room.HintHost">Share the code with friends; closing the room stops the multiplayer core.</sys:String>
+    <sys:String x:Key="String.Multi.Room.HintGuest">Leaving the room stops the multiplayer core and returns to the entry page.</sys:String>
+    <sys:String x:Key="String.Multi.Room.ActionHost">Close room or Back will end this session.</sys:String>
+    <sys:String x:Key="String.Multi.Room.ActionGuest">Leave room or Back will end this session.</sys:String>
+    <sys:String x:Key="String.Multi.Room.CloseRoom">Close room</sys:String>
+    <sys:String x:Key="String.Multi.Room.LeaveRoom">Leave room</sys:String>
+    <sys:String x:Key="String.Multi.Room.PeersLabel">Members</sys:String>
+    <sys:String x:Key="String.Multi.Room.GuestUrl">Connection address</sys:String>
+    <sys:String x:Key="String.Multi.Room.WaitingCode">Generating invitation code…</sys:String>
+    <sys:String x:Key="String.Multi.Room.BrowserHint">If the Terracotta core has opened its browser page, you may continue here or use that browser page instead; both views reflect the same room state.</sys:String>
+    <sys:String x:Key="String.Multi.RestartCore">Retry starting core</sys:String>
+    <sys:String x:Key="String.Multi.RestartingCore">Restarting the multiplayer core…</sys:String>
+    <sys:String x:Key="String.Multi.RestartCoreOk">Core restarted. Please retry the previous action.</sys:String>
+    <sys:String x:Key="String.Multi.RestartCoreHint">Only the core launched by this launcher is restarted; an externally running core is re-detected, not terminated.</sys:String>
+    <sys:String x:Key="String.Multi.Err.RestartFailed">Failed to restart the multiplayer core: {0}</sys:String>
 </ResourceDictionary>

@@ -144,6 +144,9 @@ public sealed class LauncherContext
             _ = SelectFastestMirrorAsync();
 
         SettingsService.SettingsChanged += (_, _) => ApplySettings();
+        // 启动时按物理目录补齐实例登记：磁盘里有版本、注册表里却没有，
+        // 就不能在文件夹页 / 实例设置里显示成「0 个实例」。
+        try { EnsureFolderInstances(CurrentFolderId); } catch (Exception ex) { Log.Warn("Context", "Folder scan failed: " + ex.Message); }
         Log.Info("Context", L.F("String.Core.Log.Context.Ready", Paths.RootDirectory));
     }
 
@@ -241,6 +244,38 @@ public sealed class LauncherContext
         }
     }
 
+    /// <summary>当前文件夹的物理目录（默认文件夹就是 .minecraft）。</summary>
+    public string CurrentFolderDirectory()
+    {
+        var id = CurrentFolderId;
+        if (string.IsNullOrEmpty(id)) return Paths.GameDirectory;
+        var folder = Folders.Find(id);
+        return folder is null ? Paths.GameDirectory : Folders.Resolve(folder);
+    }
+
+    /// <summary>
+    /// 按物理目录扫描已安装版本，不读共享 .minecraft 的缓存。
+    /// 用于「文件夹」页和实例页：新文件夹里没装过的版本，不该显示成已安装。
+    /// </summary>
+    public List<string> InstalledVersionsIn(string root)
+    {
+        try
+        {
+            var dir = Path.Combine(root, "versions");
+            if (!Directory.Exists(dir)) return new List<string>();
+            return Directory.EnumerateDirectories(dir)
+                .Select(d => Path.Combine(d, Path.GetFileName(d) + ".json"))
+                .Where(File.Exists)
+                .Select(Path.GetFileNameWithoutExtension)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Select(id => id!)
+                .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (IOException) { return new List<string>(); }
+        catch (UnauthorizedAccessException) { return new List<string>(); }
+    }
+
     /// <summary>游戏目录内已安装的版本列表。</summary>
     public List<string> InstalledVersions()
     {
@@ -304,6 +339,93 @@ public sealed class LauncherContext
         if (instance is null) return Settings.Paths.IsolationMode;
         return instance.IsolationModeEffective(Settings.Paths.IsolationMode);
     }
+
+    private readonly HashSet<string> _syncedFolderIds = new(StringComparer.Ordinal);
+    private bool _syncingFolders;
+
+    /// <summary>
+    /// 按物理目录补齐实例登记。文件夹决定实例：某个文件夹的 versions/ 下已有
+    /// 完整版本 JSON，却没在 instances.json 里登记时，补一条属于该文件夹的实例，
+    /// 避免「资源管理器里看得到、启动器里显示 0 个」。每次会话每个文件夹只补一次。
+    /// </summary>
+    public int EnsureFolderInstances(string folderId)
+    {
+        if (string.IsNullOrEmpty(folderId) || _syncingFolders) return 0;
+        if (!_syncedFolderIds.Add(folderId)) return 0;
+        _syncingFolders = true;
+        try
+        {
+            var folder = Folders.Find(folderId);
+            if (folder is null) return 0;
+            var created = 0;
+            foreach (var version in InstalledVersionsIn(Folders.Resolve(folder)))
+            {
+                var exists = Instances.Instances.Any(i =>
+                    string.Equals(i.FolderId ?? "", folderId, StringComparison.Ordinal) &&
+                    string.Equals(i.VersionId, version, StringComparison.OrdinalIgnoreCase));
+                if (exists || Instances.NameExists(version, folderId)) continue;
+                try
+                {
+                    var instance = Instances.Create(version, version,
+                        Settings.Paths.InstanceIsolation, folderId);
+                    instance.FolderId = folderId;
+                    created++;
+                }
+                catch (Exception ex) { Log.Warn("Context", "Register folder instance failed: " + ex.Message); }
+            }
+            if (created > 0)
+            {
+                Instances.Save();
+                Log.Info("Context", $"已按目录补齐 {created} 个实例：{folder.Name}");
+            }
+            return created;
+        }
+        finally { _syncingFolders = false; }
+    }
+
+    /// <summary>用户主动查看文件夹时重扫一次（本次会话内可能又装了新版本）。</summary>
+    public void RescanFolderInstances(string folderId)
+    {
+        _syncedFolderIds.Remove(folderId);
+        EnsureFolderInstances(folderId);
+    }
+
+    /// <summary>
+    /// 当前浏览的实例文件夹 id（空 = 默认 .minecraft）。
+    /// 文件夹决定实例的可见范围与名称查重作用域；切换时若原来选中的实例
+    /// 不属于新文件夹，自动改选新文件夹里的第一个，避免"页面里显示、磁盘里没有"。
+    /// </summary>
+    public string CurrentFolderId
+    {
+        get => Settings.CurrentFolderId ?? "";
+        set
+        {
+            var id = value ?? "";
+            if (string.Equals(Settings.CurrentFolderId ?? "", id, StringComparison.Ordinal)) return;
+            Settings.CurrentFolderId = string.IsNullOrEmpty(id) ? null : id;
+            var selected = Instances?.Find(Settings.SelectedInstanceId);
+            if (selected is null || !string.Equals(selected.FolderId ?? "", id, StringComparison.Ordinal))
+                Settings.SelectedInstanceId = Instances?.Instances
+                    .FirstOrDefault(i => string.Equals(i.FolderId ?? "", id, StringComparison.Ordinal))?.Id;
+            Save();
+            try { EnsureFolderInstances(id); } catch (Exception ex) { Log.Warn("Context", "Folder scan failed: " + ex.Message); }
+        }
+    }
+
+    /// <summary>当前文件夹里的实例。文件夹决定实例，而不是实例决定文件夹。</summary>
+    public List<GameInstance> InstancesInCurrentFolder()
+    {
+        var id = CurrentFolderId;
+        try { EnsureFolderInstances(id); } catch (Exception ex) { Log.Warn("Context", "Folder scan failed: " + ex.Message); }
+        return Instances.Instances
+            .Where(i => string.Equals(i.FolderId ?? "", id, StringComparison.Ordinal))
+            .ToList();
+    }
+
+    /// <summary>某个实例是否属于当前文件夹。</summary>
+    public bool IsInCurrentFolder(GameInstance? instance)
+        => instance is not null
+           && string.Equals(instance.FolderId ?? "", CurrentFolderId, StringComparison.Ordinal);
 
     public string SharedGameDirectoryFor(GameInstance? instance)
     {

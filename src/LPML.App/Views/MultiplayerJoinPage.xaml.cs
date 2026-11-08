@@ -77,6 +77,7 @@ public sealed partial class MultiplayerJoinPage : UserControl, IDisposable
             await _core.JoinRoomAsync(code, player).ConfigureAwait(true);
             JoinStatusText.Text = Lang.T("String.Multi.StateGuestConnecting");
             UpdateNotice();
+            _main.NavigateToContent(new MultiplayerRoomPage(_main, _ctx, _core, TerracottaSessionMode.Join));
         }
         catch (OperationCanceledException)
         {
@@ -84,7 +85,10 @@ public sealed partial class MultiplayerJoinPage : UserControl, IDisposable
         }
         catch (Exception ex)
         {
+            LPML.Core.Log.Warn("Multi", $"加入房间失败：{ex.GetType().Name}: {ex.Message}");
             JoinStatusText.Text = Lang.F("String.Multi.Err.ResolveDetail", ex.Message);
+            if (MultiplayerCoreRetry.NeedsRestart(_core, _core.IsInstalled))
+                ShowRestartFailure(ex.Message);
         }
         finally
         {
@@ -106,6 +110,7 @@ public sealed partial class MultiplayerJoinPage : UserControl, IDisposable
 
     private static string StateText(TerracottaStateKind kind, string? error) => kind switch
     {
+        TerracottaStateKind.CoreStarting => Lang.T("String.Multi.CoreStarting"),
         TerracottaStateKind.HostScanning => Lang.T("String.Multi.StateHostScanning"),
         TerracottaStateKind.HostStarting => Lang.T("String.Multi.StateHostStarting"),
         TerracottaStateKind.HostOk => Lang.T("String.Multi.StateHostOk"),
@@ -126,12 +131,37 @@ public sealed partial class MultiplayerJoinPage : UserControl, IDisposable
             : Lang.T("String.Multi.RoomCodeFormat");
     }
 
+    private void ShowRestartFailure(string message)
+    {
+        RestartPanel.Visibility = Visibility.Visible;
+        RestartButton.Visibility = Visibility.Visible;
+        RestartStatusText.Text = message;
+    }
+
+    private async void RestartCore_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!RestartButton.IsEnabled) return;
+        RestartStatusText.Text = Lang.T("String.Multi.RestartingCore");
+        await MultiplayerCoreRetry.RunAsync(
+            _core,
+            busy => { RestartButton.IsEnabled = !busy; },
+            () =>
+            {
+                RestartStatusText.Text = Lang.T("String.Multi.RestartCoreOk");
+                RestartButton.Visibility = Visibility.Collapsed;
+            },
+            message => ShowRestartFailure(message)).ConfigureAwait(true);
+    }
+
+    private void Back_OnClick(object? sender, RoutedEventArgs e) => GoBack();
+
     private void GoBack()
     {
-        if (_core.IsRunning &&
+        if (_core.IsRunning && _core.HasActiveRoom &&
             !Notice.Ask(Lang.F("String.Multi.ConfirmLeave", Lang.T("String.Multi.JoinRoom")))) return;
+        _ = _core.ExitRoomAsync();
         PendingSessionStore.RequestedAddress = null;
-        if (Application.Current.MainWindow is MainWindow window) window.Navigate("multiplayer");
+        _main.ShowMultiplayer();
     }
 
     // 核心实例由联机入口页创建并共享给子页，这里不释放，避免返回后失效。

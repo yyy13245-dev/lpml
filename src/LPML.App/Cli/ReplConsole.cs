@@ -20,9 +20,16 @@ public sealed class ReplConsole
     private string _input = "";
     private string _header = "";
     private string _hint = "";
+    private readonly string _defaultHint;
+    private bool _transcriptHintActive;
+
+    /// <summary>整段文本（完整命令表）输出后临时显示的底部提示；下一条命令自动恢复默认提示。</summary>
+    public string? TranscriptHint { get; set; }
     private bool _running;
     private bool _ansiEnabled;
     private bool _autoScroll = true;
+    private volatile bool _suppressRender;
+    private volatile bool _clearOnRender;
 
     private DateTime _lastRender = DateTime.MinValue;
     private static readonly TimeSpan RenderThrottle = TimeSpan.FromMilliseconds(60);
@@ -40,6 +47,7 @@ public sealed class ReplConsole
     {
         _header = header;
         _hint = hint;
+        _defaultHint = hint;
         _ansiEnabled = TryEnableAnsi();
     }
 
@@ -157,16 +165,22 @@ public sealed class ReplConsole
         string header, hint, input;
         lock (_sync)
         {
-            lines = _log.Count <= logArea
-                ? new List<string>(_log)
-                : _log.GetRange(_log.Count - logArea, logArea);
+            var snapshot = new List<string>(_log);
             header = _header;
             hint = _hint;
             input = _input;
+            lines = Wrap(snapshot, width - 1);
         }
+        if (lines.Count > logArea)
+            lines = lines.GetRange(lines.Count - logArea, logArea);
 
         var sb = new StringBuilder();
-        sb.Append("\u001b[H");   // 光标归位
+        if (_clearOnRender)
+        {
+            _clearOnRender = false;
+            sb.Append("\u001b[H\u001b[J");   // transcript 之后重建分区，先清掉残留
+        }
+        else sb.Append("\u001b[H");         // 平时只归位，逐行 2K 清，不闪
 
         // header
         sb.Append("\u001b[2K").Append(Fit(header, width - 1)).Append('\n');
@@ -203,12 +217,68 @@ public sealed class ReplConsole
         Console.Write("> " + input);
     }
 
-    /// <summary>截断到指定宽度，避免换行破坏布局。</summary>
+    /// <summary>
+    /// 头部 / 提示 / 输入行的单行适配。超宽时硬截断，不加省略号
+    /// （旧版用省略号截断，容易被误认为命令没打完）。
+    /// </summary>
     private static string Fit(string text, int width)
     {
         if (width <= 0) return "";
-        if (text.Length <= width) return text;
-        return text[..Math.Max(0, width - 1)] + "…";
+        return text.Length <= width ? text : text[..width];
+    }
+
+    /// <summary>
+    /// 日志区按宽度软折行：内容一个字不丢，也不加任何省略号。
+    /// 超宽行拆成多行，仍逐行 2K 清行，分区布局不变。
+    /// </summary>
+    private static List<string> Wrap(IEnumerable<string> lines, int width)
+    {
+        var result = new List<string>();
+        if (width <= 0) return result;
+        foreach (var raw in lines)
+        {
+            if (raw.Length <= width) { result.Add(raw); continue; }
+            for (var i = 0; i < raw.Length; i += width)
+                result.Add(raw.Substring(i, Math.Min(width, raw.Length - i)));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 完整命令表等大段文本：一次性逐行写到控制台，全部可见、可上滚。
+    /// 不截断、不加省略号，也不走日志区的行数限制；同时并入日志缓冲，
+    /// 分区恢复后仍保留尾部内容。输出后跳过一次重绘，免得立刻被分区盖住。
+    /// </summary>
+    public void WriteTranscript(IEnumerable<string> lines)
+    {
+        var all = lines.ToList();
+        lock (_renderLock)
+        {
+            try
+            {
+                if (_ansiEnabled)
+                    Console.Write("\u001b[H\u001b[2J");   // 撤掉固定分区，光标归位
+                foreach (var line in all) Console.WriteLine(line);
+                Console.Out.Flush();
+            }
+            catch (IOException)
+            {
+                foreach (var line in all) Console.WriteLine(line);
+            }
+        }
+
+        lock (_sync)
+        {
+            foreach (var line in all) _log.Add(line);
+            if (_log.Count > MaxBuffer) _log.RemoveRange(0, _log.Count - MaxBuffer);
+            if (TranscriptHint is not null)
+            {
+                _hint = TranscriptHint;
+                _transcriptHintActive = true;
+            }
+        }
+        _suppressRender = true;
+        _clearOnRender = true;
     }
 
     // ── 输入循环 ───────────────────────────────────────────
@@ -283,11 +353,20 @@ public sealed class ReplConsole
 
             if (command is not null)
             {
+                lock (_sync)
+                {
+                    if (_transcriptHintActive)
+                    {
+                        _hint = _defaultHint;
+                        _transcriptHintActive = false;
+                    }
+                }
                 var shouldExit = OnCommand?.Invoke(command) ?? false;
                 if (shouldExit) { _running = false; break; }
             }
 
-            Render();
+            if (_suppressRender) _suppressRender = false;
+            else Render();
         }
 
         if (_ansiEnabled)

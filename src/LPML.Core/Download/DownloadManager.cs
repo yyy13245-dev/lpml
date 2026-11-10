@@ -33,6 +33,9 @@ public sealed class DownloadManager
     private bool _running;
     private TaskCompletionSource? _runCompletion;
 
+    /// <summary>整批自动重下的等待期专用令牌：暂停 / 取消时用它立刻打断等待。</summary>
+    private CancellationTokenSource? _autoRetryCts;
+
     /// <summary>本轮实际使用的并发数（会在运行期自适应调整）。</summary>
     /// <summary>基准并发：由文件大小自适应算出（小文件高、大文件低）。</summary>
     private int _baseConcurrency;
@@ -85,7 +88,7 @@ public sealed class DownloadManager
     /// <summary>当前任务（兼容旧的无参调用；新代码请保存 BeginTask 返回的句柄）。</summary>
     public DownloadTask? CurrentTask { get { lock (_sync) return _currentTask; } }
 
-    /// <summary>给当前任务加一个安装步骤（预留：加载器安装等）。</summary>
+    /// <summary>给当前任务加一个安装步骤。</summary>
     public TaskStep? AddStep(string name)
     {
         DownloadTask? task;
@@ -98,6 +101,8 @@ public sealed class DownloadManager
     {
         var step = new TaskStep { Name = name };
         task.AddStep(step);
+        // 步骤本身不发进展事件，不通知的话「安装流程」页会一直停在空状态。
+        ItemChanged?.Invoke(this, new DownloadItem { Name = "" });
         return step;
     }
 
@@ -123,6 +128,41 @@ public sealed class DownloadManager
     }
 
     public void ClearTasks() { lock (_sync) _tasks.Clear(); }
+
+    /// <summary>只清掉这一个任务组及其文件；任务详情页里的「清空」用，绝不碰别的任务。</summary>
+    public void ClearTask(DownloadTask task)
+    {
+        var owned = task.SnapshotItems().ToList();
+        lock (_sync)
+        {
+            foreach (var item in owned)
+            {
+                item.PropertyChanged -= ItemOnPropertyChanged;
+                _items.Remove(item);
+            }
+            _tasks.Remove(task);
+            if (ReferenceEquals(_currentTask, task)) _currentTask = _tasks.LastOrDefault();
+        }
+        ItemChanged?.Invoke(this, new DownloadItem { Name = "" });
+    }
+
+    /// <summary>
+    /// 只暂停某个任务里的未完成文件。不动全局 _cts / _paused，别的任务照常跑。
+    /// 排队中（还没拿到许可）的文件也要一并标成已暂停：否则它们随后被取消时
+    /// 会落进「非暂停 → 已取消」分支，界面上就是「点暂停却显示已取消」。
+    /// </summary>
+    public void PauseTask(DownloadTask task)
+    {
+        CancelAutoRetryWait();
+        var targets = task.SnapshotItems()
+            .Where(i => i.IsActive || i.Status == DownloadStatus.Pending).ToList();
+        foreach (var item in targets)
+        {
+            item.Cancel();
+            item.Status = DownloadStatus.Paused;
+            item.StatusText = L.T("String.Core.Status.Paused");
+        }
+    }
     public bool IsPaused => _paused;
     public IReadOnlyList<DownloadItem> Items { get { lock (_sync) return _items.ToList(); } }
 
@@ -247,6 +287,21 @@ public sealed class DownloadManager
     private void ItemOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not DownloadItem item) return;
+        // 绝不能在持有 _sync 时同步派发属性事件：
+        // 任务中心用 Dispatcher.Invoke 同步等 UI 线程刷新，而 Refresh 又要读
+        // Downloads.Items / Tasks（需要 _sync）。两边互等就是「整批重下第二轮
+        // 开始后整个界面 20 秒无响应、被守护进程强杀」的死锁。
+        // 锁内触发的一律延后到线程池派发，锁外触发的保持即时。
+        if (Monitor.IsEntered(_sync))
+        {
+            ThreadPool.QueueUserWorkItem(_ => DispatchItemChanged(item, e));
+            return;
+        }
+        DispatchItemChanged(item, e);
+    }
+
+    private void DispatchItemChanged(DownloadItem item, PropertyChangedEventArgs e)
+    {
         if (e.PropertyName == nameof(DownloadItem.Status) || e.PropertyName == nameof(DownloadItem.StatusText))
             ItemChanged?.Invoke(this, item);
 
@@ -265,9 +320,20 @@ public sealed class DownloadManager
             if (task is null || task.Finished) return;
             var items = task.SnapshotItems();
             if (items.Count == 0) return;
-            if (items.Any(i => i.IsActive || i.Status == DownloadStatus.Pending)) return;
+            // 暂停 / 失败 / 取消都还没落地，不能标成「已完成」：
+            // 否则任务卡片显示完成，里面那个文件却还停在排队或已取消。
+            if (items.Any(i => i.Status is not (DownloadStatus.Completed or DownloadStatus.Skipped))) return;
             task.Finished = true;
         }
+    }
+
+    /// <summary>打断整批自动重下的等待期；暂停 / 取消时不该再等 X 秒后偷偷开跑。</summary>
+    private void CancelAutoRetryWait()
+    {
+        CancellationTokenSource? cts;
+        lock (_sync) { cts = _autoRetryCts; }
+        try { cts?.Cancel(); }
+        catch (ObjectDisposedException) { }
     }
 
     public void Pause()
@@ -275,18 +341,20 @@ public sealed class DownloadManager
         _paused = true;
         lock (_sync)
         {
-            foreach (var item in _items.Where(i => i.IsActive))
+            foreach (var item in _items.Where(i => i.IsActive || i.Status == DownloadStatus.Pending))
             {
                 item.Cancel();
                 item.Status = DownloadStatus.Paused;
                 item.StatusText = L.T("String.Core.Status.Paused");
             }
         }
+        CancelAutoRetryWait();
         _cts.Cancel();
     }
 
     public void CancelAll()
     {
+        CancelAutoRetryWait();
         _cts.Cancel();
         lock (_sync)
         {
@@ -301,6 +369,7 @@ public sealed class DownloadManager
     /// <summary>取消某个任务（及其所有未完成的文件）。</summary>
     public void CancelTask(DownloadTask task)
     {
+        CancelAutoRetryWait();
         lock (_sync)
         {
             foreach (var item in task.SnapshotItems().Where(i => i.Status is DownloadStatus.Pending
@@ -341,10 +410,9 @@ public sealed class DownloadManager
                          i.Status is DownloadStatus.Failed or DownloadStatus.Canceled
                                    or DownloadStatus.Paused or DownloadStatus.Pending))
             {
-                item.Error = null;
-                item.RetryUsed = 0;
-                item.Status = DownloadStatus.Pending;
-                item.StatusText = L.T("String.Core.Status.Queued");
+                // Reset 会重建被暂停时已取消的 CancellationTokenSource，
+                // 手工改状态的话「继续」会在第一帧立刻被取消。
+                item.Reset();
             }
             if (_currentTask is not null) _currentTask.Finished = false;
         }
@@ -378,8 +446,10 @@ public sealed class DownloadManager
         {
             foreach (var item in targets)
             {
-                // 新文件才重置；重试已存在的文件时也清掉失败/取消标记
-                if (item.Status is DownloadStatus.Failed or DownloadStatus.Canceled or DownloadStatus.Paused)
+                // 新文件才重置；重试已存在的文件时也清掉失败/取消标记。
+                // 已完成但曾被暂停过的文件，令牌仍是已取消的，重下前也要换新的。
+                if (item.Status is DownloadStatus.Failed or DownloadStatus.Canceled or DownloadStatus.Paused
+                    || item.Cancellation.IsCancellationRequested)
                     item.Reset();
                 item.PropertyChanged -= ItemOnPropertyChanged;
                 item.PropertyChanged += ItemOnPropertyChanged;
@@ -443,6 +513,10 @@ public sealed class DownloadManager
             var current = _runCompletion;
             if (current is null) break;   // 状态不一致，别死等
 
+            // 上一轮已经没有任何活跃文件、只是卡在「整批重下等 X 秒」时，
+            // 新入队的文件会一直挂在「排队中」。提前打断那段等待，让新批次马上接上。
+            if (!Items.Any(i => i.IsActive)) CancelAutoRetryWait();
+
             try { await current.Task.ConfigureAwait(false); }
             catch (Exception) { /* 前一轮的结果不影响这一轮 */ }
 
@@ -453,18 +527,51 @@ public sealed class DownloadManager
             }
         }
 
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
         _paused = false;
         _running = true;
-        _budget.Reset();
         _runCompletion = new TaskCompletionSource();
+        var started = DateTime.UtcNow;
+
+        try
+        {
+            // 先跑一轮；再把仍然失败的文件整批重下（由设置项控制轮数与等待秒数）。
+            // 整个 RunAsync 期间 _running 保持 true，别的调用方不会插进来抢同一批文件。
+            var targets = await RunRoundAsync(started, token).ConfigureAwait(false);
+            await AutoRetryAsync(targets, token).ConfigureAwait(false);
+
+            lock (_sync)
+            {
+                // 自动重下用尽后仍有失败文件时别假报完成，否则一级卡片显示
+                // 「已完成」、点进去却有文件停在排队 / 失败。
+                if (_currentTask is not null && _currentTask.SnapshotItems().All(i =>
+                        i.Status is DownloadStatus.Completed or DownloadStatus.Skipped))
+                    _currentTask.Finished = true;
+            }
+            Finished?.Invoke(this, BuildAggregate(started));
+        }
+        finally
+        {
+            _running = false;
+            _runCompletion?.TrySetResult();
+            _temp.TrimCacheIfNeeded();
+        }
+    }
+
+    /// <summary>
+    /// 跑一轮：挑出待下载的文件、并发下完、写汇总日志。
+    /// only 不为空时只跑这批（自动整批重下用），避免把别的任务的文件一起拖进来。
+    /// 返回本轮真正参与下载的文件，供外层判断哪些仍然失败。
+    /// </summary>
+    private async Task<List<DownloadItem>> RunRoundAsync(DateTime started, CancellationToken token,
+        IReadOnlyList<DownloadItem>? only = null)
+    {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        _budget.Reset();
 
         // 把上一批已下载完的文件从"活跃队列"里移走（任务自己仍保留完整记录）。
         // 不清空全局队列是为了不打断并发安装，但留着的话顶部汇总会把历史文件
         // 也算进分母，看起来像"刚开始就快满了"。
         PruneCompleted();
-
-        var started = DateTime.UtcNow;
 
         try
         {
@@ -473,7 +580,9 @@ public sealed class DownloadManager
             {
                 // Canceled 也算"没下完"：点了继续 / 重新开始就该接着下，
                 // 以前它不在筛选里，于是取消过的文件再也不会被下载。
-                pending.AddRange(_items.Where(i =>
+                // 自动整批重下时只挑本批失败文件，不把别的任务的文件拖进来。
+                IEnumerable<DownloadItem> source = only is null ? (IEnumerable<DownloadItem>)_items : only;
+                pending.AddRange(source.Where(i =>
                     i.Status is DownloadStatus.Pending or DownloadStatus.Paused
                               or DownloadStatus.Failed or DownloadStatus.Canceled));
             }
@@ -483,7 +592,8 @@ public sealed class DownloadManager
             foreach (var item in pending)
             {
                 // 本地已有相同 sha1 的文件 → 硬链接过去，不用下载
-                if (!string.IsNullOrWhiteSpace(item.Sha1)
+                if (!item.ForceRedownload
+                    && !string.IsNullOrWhiteSpace(item.Sha1)
                     && _index.TryGetPath(item.Sha1!, out var existing)
                     && !string.Equals(existing, item.Destination, StringComparison.OrdinalIgnoreCase)
                     && HardLink.TryCreate(existing, item.Destination))
@@ -494,8 +604,15 @@ public sealed class DownloadManager
                     item.Status = DownloadStatus.Completed;
                     continue;
                 }
-                item.Status = DownloadStatus.Pending;
-                item.StatusText = L.T("String.Core.Status.Queued");
+                // 暂停 / 失败 / 取消过的文件必须 Reset：它会重建已取消的
+                // CancellationTokenSource，否则一进 DownloadAsync 就立刻被取消。
+                if (item.Status is DownloadStatus.Failed or DownloadStatus.Canceled or DownloadStatus.Paused)
+                    item.Reset();
+                else
+                {
+                    item.Status = DownloadStatus.Pending;
+                    item.StatusText = L.T("String.Core.Status.Queued");
+                }
                 stillPending.Add(item);
             }
 
@@ -527,7 +644,7 @@ public sealed class DownloadManager
 
             // 队列为空但界面上有条目：多半是本地已存在被跳过了，
             // 不把状态标出来就会一直显示"等待中"，看着像卡死。
-            if (pending.Count == 0)
+            if (pending.Count == 0 && only is null)
             {
                 lock (_sync)
                 {
@@ -546,9 +663,18 @@ public sealed class DownloadManager
                 pending = pending.OrderBy(i => i.ExpectedSize ?? 0).ToList();
 
             // 基准并发：开了自适应就按文件大小算，否则用固定设定值
-            _baseConcurrency = _settings.EnableSizeAwareConcurrency
+            var planned = _settings.EnableSizeAwareConcurrency
                 ? ComputeSizeAwareConcurrency(pending)
                 : Math.Clamp(_settings.MaxConcurrentTasks, 1, 128);
+            // 只剩一两个文件时不能按「文件数」把连接预算压到 1：文件级并发确实
+            // 只有 1，但空出来的额度要留给这个文件的分段连接，否则最后一个
+            // 加载器 jar 只能单线程爬，还会被单连接停滞反复拖到换源。
+            var cap = pending.Count <= 2
+                ? Math.Clamp(_settings.MaxConcurrentTasks, 1, 128)
+                : Math.Max(1, pending.Count);
+            _baseConcurrency = Math.Clamp(Math.Min(planned, cap), 1, 128);
+            // 队列空闲标记：分段门槛临时下调、段数放宽（见 ChunkedDownloader）
+            foreach (var item in pending) item.IdleQueueBoost = pending.Count <= 2;
             _tuneAdjust = 0;
             _successCount = 0;
             _failureStreak = 0;
@@ -564,6 +690,10 @@ public sealed class DownloadManager
             var sizeAware = _settings.EnableSizeAwareConcurrency
                 ? Task.Run(() => SizeAwareLoopAsync(pending, _cts.Token), _cts.Token)
                 : Task.CompletedTask;
+            // 「队列空闲」标记要随队列推进刷新。开跑时只按整批文件数算一次的话，
+            // 其余文件陆续下完、只剩最后一个大文件时它仍按整批门槛走单线程；
+            // 暂停再继续之所以能提速，正是因为重算了一次。这里把重算变成常态。
+            var boostLoop = Task.Run(() => BoostLoopAsync(pending, _cts.Token), _cts.Token);
             var reporter = Task.Run(() => ReportLoopAsync(started, _cts.Token), _cts.Token);
 
             var tasks = pending.Select(async item =>
@@ -571,6 +701,18 @@ public sealed class DownloadManager
                 await semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
                 try
                 {
+                    // 排队期间被暂停 / 取消的文件不要再发请求：它的令牌已经取消，
+                    // 硬跑只会立刻抛 OperationCanceledException，界面又变回「已取消」。
+                    if (item.Status is DownloadStatus.Paused or DownloadStatus.Canceled
+                        || item.Cancellation.IsCancellationRequested)
+                    {
+                        if (item.Status != DownloadStatus.Canceled)
+                        {
+                            item.Status = DownloadStatus.Paused;
+                            item.StatusText = L.T("String.Core.Status.Paused");
+                        }
+                        return;
+                    }
                     RerouteDegraded(item);
                     for (var attempt = 0; attempt <= _settings.RetryCount; attempt++)
                     {
@@ -598,23 +740,37 @@ public sealed class DownloadManager
                             var badHost = HostOf(item.Url);
                             var hostFailure = IsHostFailure(ex);
                             var missing = IsMissingOnMirror(ex);
-                            if (hostFailure) _health.MarkBroken(badHost);
+                            // 停滞只是「这一路太慢」，短降级就够；DNS/SSL 失败才是真不可达，
+                            // 拉黑 5 分钟会让后续几十个文件全都绕开一个其实能用的官方源。
+                            if (hostFailure)
+                            {
+                                if (ex is StalledTransferException) _health.MarkDegraded(badHost);
+                                else _health.MarkBroken(badHost);
+                            }
                             if (missing) NoteMirrorMiss(badHost);
 
                             // 403/404 说明这个镜像根本没有该文件；DNS/SSL 失败说明这个域名根本连不上。
                             // 两者重试同一个地址都毫无意义，必须换源。
-                            var switched = TrySwitchMirror(item, ex, attempt);
+                            var switched = TrySwitchMirror(item, ex);
                             if (switched)
                             {
-                                if (ThrottleWarn("switch:" + badHost))
-                                    Log.Warn("Download", L.F("String.Core.Log.Download.SwitchMirror", item.Name, HostOf(item.Url)));
+                                var stalled = ex is StalledTransferException;
+                                var key = (stalled ? "stall:" : "switch:") + badHost;
+                                if (ThrottleWarn(key))
+                                    Log.Warn("Download", stalled
+                                        ? L.F("String.Core.Log.Download.StallSwitch", item.Name, HostOf(item.Url))
+                                        : L.F("String.Core.Log.Download.SwitchMirror", item.Name, HostOf(item.Url)));
                             }
                             else if (ThrottleWarn("retry:" + badHost))
                                 Log.Warn("Download", L.F("String.Core.Log.Download.Retrying", item.Name, ex.Message));
 
+                            // 429 时立刻收窄并发，不等 TuneConcurrency 的 12 文件统计窗口：
+                            // 只有 3 个文件的批次永远凑不满那个窗口，会一直高并发继续撞限流
+                            if (IsRateLimited(ex)) TightenForRateLimit();
+
                             // 已经换到别的源就立刻重试，不必退避；429 是被限流，再拉长一档
                             var backoff = Math.Min(400 * Math.Pow(2, attempt), 8000);
-                            var delay = switched && (hostFailure || missing)
+                            var delay = switched && (hostFailure || missing || IsRateLimited(ex))
                                 ? 0
                                 : IsRateLimited(ex) ? Math.Min(backoff * 3, 15000) : backoff;
                             if (delay > 0)
@@ -625,8 +781,9 @@ public sealed class DownloadManager
                 catch (OperationCanceledException)
                 {
                     // 暂停也是靠取消 _cts 实现的，但那些文件是"暂停"不是"取消"。
-                    // 以前一律标成 Canceled，点继续后它们既不在排队里、界面又显示已取消。
-                    if (_paused)
+                    // PauseTask 已经把状态设成 Paused，这里绝不能再覆盖回去。
+                    if (item.Status == DownloadStatus.Paused) { /* 保持已暂停 */ }
+                    else if (_paused)
                     {
                         item.Status = DownloadStatus.Paused;
                         item.StatusText = L.T("String.Core.Status.Paused");
@@ -656,19 +813,104 @@ public sealed class DownloadManager
             _cts.Cancel();
             try { await rampUp.ConfigureAwait(false); } catch (OperationCanceledException) { }
             try { await sizeAware.ConfigureAwait(false); } catch (OperationCanceledException) { }
+            try { await boostLoop.ConfigureAwait(false); } catch (OperationCanceledException) { }
             try { await reporter.ConfigureAwait(false); } catch (OperationCanceledException) { }
             try { await throughput.ConfigureAwait(false); } catch (OperationCanceledException) { }
             Report(started);
             LogPhaseSummary(started, pending);
-            lock (_sync) { if (_currentTask is not null) _currentTask.Finished = true; }
-            Finished?.Invoke(this, BuildAggregate(started));
+            return pending;
         }
         finally
         {
-            _running = false;
-            _runCompletion?.TrySetResult();
-            _temp.TrimCacheIfNeeded();
+            // 异常退出时也要停掉本轮的后台循环（限速采样、进度上报等）
+            _cts.Cancel();
         }
+    }
+
+    /// <summary>把相关任务从"已完成"拉回"进行中"，重下期间界面不会提前显示完成。</summary>
+    private void ResetTaskFinishedFlag(IEnumerable<DownloadItem> items)
+    {
+        // 老路径入队的文件可能没有 Owner，按任务实际持有的条目反查，避免漏掉
+        var set = items as ICollection<DownloadItem> ?? items.ToList();
+        lock (_sync)
+        {
+            foreach (var task in _tasks)
+                if (task.SnapshotItems().Any(set.Contains)) task.Finished = false;
+        }
+    }
+
+    /// <summary>
+    /// 整批自动重下：一轮结束后把仍然失败的文件整体重新排队，
+    /// 每轮之间等待设定的秒数，最多重下 N 轮。
+    /// 与 RetryCount（单个文件失败后的即时重试）互不影响；
+    /// 重下的是"本轮跑过的文件"里失败的那些，不会把别的任务的文件拖进来。
+    /// </summary>
+    private async Task AutoRetryAsync(List<DownloadItem> targets, CancellationToken token)
+    {
+        var s = _settings;
+        var maxRounds = Math.Clamp(s.AutoRetryRounds, 0, 20);
+        var waitSeconds = Math.Clamp(s.AutoRetryDelaySeconds, 0, 3600);
+        if (!s.EnableAutoRetryRound || maxRounds <= 0) return;
+
+        var failed = targets.Where(i => i.Status == DownloadStatus.Failed).ToList();
+        if (failed.Count == 0) return;
+        ResetTaskFinishedFlag(failed);
+        var stopped = false;
+
+        for (var round = 1; round <= maxRounds && failed.Count > 0; round++)
+        {
+            if (_paused || token.IsCancellationRequested)
+            {
+                Log.Info("Download", L.T("String.Core.Log.AutoRetry.Cancelled"));
+                stopped = true;
+                break;
+            }
+
+            // 状态文字变化会触发 ItemChanged，界面上能看到"等待 X 秒后重下"
+            foreach (var item in failed)
+                item.StatusText = L.F("String.Core.Status.AutoRetryWait", round, maxRounds, waitSeconds, failed.Count);
+            Log.Info("Download", L.F("String.Core.Log.AutoRetry.Start", round, maxRounds, failed.Count, waitSeconds));
+
+            using var waitCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            lock (_sync) _autoRetryCts = waitCts;
+            try
+            {
+                if (waitSeconds > 0)
+                    await Task.Delay(TimeSpan.FromSeconds(waitSeconds), waitCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                Log.Info("Download", L.T("String.Core.Log.AutoRetry.Cancelled"));
+                stopped = true;
+                break;
+            }
+            finally
+            {
+                lock (_sync) { if (ReferenceEquals(_autoRetryCts, waitCts)) _autoRetryCts = null; }
+            }
+
+            if (_paused || token.IsCancellationRequested)
+            {
+                Log.Info("Download", L.T("String.Core.Log.AutoRetry.Cancelled"));
+                stopped = true;
+                break;
+            }
+
+            // Reset 会连发多个属性事件，别把它放在 _sync 里：UI 订阅者是同步
+            // Dispatcher.Invoke，锁内派发会把界面线程和下载线程锁成互等。
+            foreach (var item in failed) item.Reset();
+            ResetTaskFinishedFlag(failed);
+
+            // 只重跑这批失败文件，不重跑已完成的文件
+            await RunRoundAsync(DateTime.UtcNow, token, failed).ConfigureAwait(false);
+
+            failed = targets.Where(i => i.Status == DownloadStatus.Failed).ToList();
+            Log.Info("Download", L.F("String.Core.Log.AutoRetry.Done", round, failed.Count));
+            if (failed.Count > 0) ResetTaskFinishedFlag(failed);
+        }
+
+        if (failed.Count > 0 && !stopped)
+            Log.Warn("Download", L.F("String.Core.Log.AutoRetry.Exhausted", maxRounds, failed.Count));
     }
 
     /// <summary>
@@ -869,10 +1111,11 @@ public sealed class DownloadManager
         var sample = remaining.Take(24).ToList();
         if (sample.Count == 0) return Math.Clamp(_settings.MaxConcurrentTasks, 1, 128);
 
-        var sizes = sample.Select(i => i.ExpectedSize ?? 0).OrderBy(x => x).ToList();
-        var median = sizes[sizes.Count / 2];
-
         var threshold = (long)Math.Max(1, _settings.LargeFileThresholdMb) * 1024 * 1024;
+        // 大小未知（镜像没给 Content-Length）不能当作 0 字节的极小文件，
+        // 否则整批都被规划成「小文件高并发」，把限流越撞越狠。按中等体积保守估计。
+        var sizes = sample.Select(i => i.ExpectedSize ?? threshold / 2).OrderBy(x => x).ToList();
+        var median = sizes[sizes.Count / 2];
         // 0 = 极小文件，1 = 已达大文件门槛
         var t = Math.Clamp(median / (double)threshold, 0.0, 1.0);
 
@@ -895,6 +1138,33 @@ public sealed class DownloadManager
     }
 
     /// <summary>
+    /// 实时刷新「队列空闲」标记。开跑时只按整批文件数算一次的话，其余文件陆续
+    /// 下完、只剩最后一个大文件时它仍按整批门槛走单线程，界面上就是「其他文件
+    /// 都下完了，它还一线程慢慢爬」。暂停再继续能提速，正是因为重算了一次；
+    /// 这里把重算变成常态。只改还没真正开始下载的文件，飞行中的请求不受影响。
+    /// </summary>
+    private async Task BoostLoopAsync(List<DownloadItem> queue, CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                var live = queue.Where(i => i.Status is DownloadStatus.Pending
+                    or DownloadStatus.Preparing or DownloadStatus.Downloading
+                    or DownloadStatus.Merging or DownloadStatus.Verifying).ToList();
+                var boost = live.Count <= 2;
+                // 只改还没开跑的：已经在飞的文件若刚撞过 429 会把标记收回
+                // false，实时刷新不该把它又改回 true。
+                foreach (var item in live)
+                    if (item.Status == DownloadStatus.Pending)
+                        item.IdleQueueBoost = boost;
+                await Task.Delay(200, token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    /// <summary>
     /// 文件大小自适应规划器：定期根据队列里剩下的文件重新定基准并发。
     /// 队列按体积从小到大排过序，所以会自然经历"小文件高并发 → 大文件低并发"。
     /// </summary>
@@ -905,8 +1175,22 @@ public sealed class DownloadManager
         {
             while (!token.IsCancellationRequested)
             {
-                var remaining = queue.Where(i => i.Status == DownloadStatus.Pending).ToList();
-                var target = ComputeSizeAwareConcurrency(remaining);
+                // 统计「还没完成」而不是「还在排队」：文件一开跑状态就变成
+                // Preparing / Downloading，只看 Pending 会把 remaining 算成 0，
+                // 于是把并发压成 1、连接预算也跟着变 1，最后一个大文件只能单线程。
+                var remaining = queue.Where(i => i.Status is DownloadStatus.Pending
+                    or DownloadStatus.Preparing or DownloadStatus.Downloading
+                    or DownloadStatus.Merging or DownloadStatus.Verifying).ToList();
+                if (remaining.Count == 0) return;   // 队列清空时别再把并发改成 1
+                var cap = remaining.Count <= 2
+                    ? Math.Clamp(_settings.MaxConcurrentTasks, 1, 128)
+                    : Math.Max(1, remaining.Count);
+                var target = Math.Clamp(Math.Min(ComputeSizeAwareConcurrency(remaining), cap), 1, 128);
+                // 只剩一两个文件时，连接预算至少要能跑满「单文件最大分段数」：
+                // 否则 _budget.Max 只有 2~4，PlanChunks 开不出 8 段，最后一个
+                // 加载器 jar 还是一线程慢慢爬。此刻只有它在跑，总连接数完全可控。
+                if (remaining.Count <= 2)
+                    target = Math.Clamp(Math.Max(target, Math.Max(2, _settings.MaxChunksPerFile)), 1, 128);
 
                 var previous = Volatile.Read(ref _baseConcurrency);
                 if (target != previous)
@@ -921,7 +1205,6 @@ public sealed class DownloadManager
                     }
                 }
 
-                if (remaining.Count == 0) return;
                 await Task.Delay(400, token).ConfigureAwait(false);
             }
         }
@@ -933,7 +1216,11 @@ public sealed class DownloadManager
     private static bool IsMissingOnMirror(Exception ex)
     {
         var message = ex.Message ?? "";
-        return message.Contains("HTTP 403") || message.Contains("HTTP 404");
+        // 本地化文案是「镜像源拒绝了这个文件（403）」，不含 "HTTP 403"；
+        // 以前只认后者，403 就落进「原地重试」分支，把重试次数全耗在坏源上。
+        return message.Contains("HTTP 403") || message.Contains("HTTP 404")
+            || message.Contains("(403)") || message.Contains("（403）")
+            || message.Contains("(404)") || message.Contains("（404）");
     }
 
     /// <summary>异常是不是"被限流"（429）。</summary>
@@ -943,6 +1230,20 @@ public sealed class DownloadManager
         return message.Contains("429");
     }
 
+    /// <summary>被限流时立刻收窄并发，不等 12 文件的统计窗口。</summary>
+    private void TightenForRateLimit()
+    {
+        try
+        {
+            var baseC = Volatile.Read(ref _baseConcurrency);
+            var maxC = Math.Clamp(_settings.MaxConcurrentTasks, 1, 128);
+            var current = Volatile.Read(ref _tuneAdjust);
+            Volatile.Write(ref _tuneAdjust,
+                Math.Clamp(current - 8, 1 - baseC, Math.Max(0, maxC - baseC)));
+        }
+        catch (ObjectDisposedException) { }
+    }
+
     /// <summary>
     /// 主机级故障：DNS 解析失败、SSL 握手失败、连接被拒。
     /// 这类错误换源才有意义，对同一个地址重试多少次都一样。
@@ -950,6 +1251,8 @@ public sealed class DownloadManager
     /// </summary>
     private static bool IsHostFailure(Exception ex)
     {
+        // 连上了但长期零字节，和 DNS/SSL 失败一样属于「这个源当前不可用」，换源才有意义
+        if (ex is StalledTransferException) return true;
         for (var e = ex; e is not null; e = e.InnerException)
         {
             var m = e.Message ?? "";
@@ -1002,50 +1305,55 @@ public sealed class DownloadManager
     /// 顺序见 MirrorManager.FailoverOrder——其他镜像优先，官方源兜底。
     /// 返回是否成功换源（没有原始地址或已无候选时返回 false）。
     /// </summary>
-    private bool TrySwitchMirror(DownloadItem item, Exception ex, int attempt)
+    private bool TrySwitchMirror(DownloadItem item, Exception ex)
     {
         if (_mirrors is null) return false;
-        // 403/404（镜像没文件）和 DNS/SSL 失败（域名连不上）都要换源；
-        // 429 是限流，换源没用，留在原源退避。
-        if (!IsMissingOnMirror(ex) && !IsHostFailure(ex)) return false;
+        // 403/404（镜像没文件）、DNS/SSL 失败、源停滞、429 限流都要换源：
+        // 限流是「当前这个源」的状态，换到别的源往往立刻就能下，原地退避只是空等。
+        if (!IsMissingOnMirror(ex) && !IsHostFailure(ex) && !IsRateLimited(ex)) return false;
 
         var official = item.OriginalUrl;
         if (string.IsNullOrWhiteSpace(official)) return false;
 
         var currentHost = HostOf(item.Url);
+        // 记下这个源本次已经失败：403 的 BMCLAPI、429 的镜像、stall 的官方都别再切回去，
+        // 否则重试次数全耗在「A→B→A→B」的来回上，最后一条就是 429 收场。
+        if (!item.TriedHosts.Contains(currentHost, StringComparer.OrdinalIgnoreCase))
+            item.TriedHosts.Add(currentHost);
+        // 403 / 429 的源短时间内不参与后面几个排队文件的候选，避免 7 个库逐个撞一遍。
+        if (IsMissingOnMirror(ex) || IsRateLimited(ex)) _health.MarkDegraded(currentHost);
 
-        // 第二次还是 403：第三方镜像同步的是同一份库，一家没有基本家家都没有，
-        // 再顺着镜像列表试下去纯属浪费重试次数（还容易撞上 429）。
-        // 官方源一定有这个文件，直接上官方兜底。
-        if (attempt >= 1)
+        var candidates = new List<string>();
+        foreach (var kind in _mirrors.FailoverOrder(item.Category, official))
         {
-            var direct = _mirrors.RewriteWith(official, item.Category, MirrorKind.Official);
-            if (!string.IsNullOrWhiteSpace(direct) && HostOf(direct) != currentHost)
-            {
-                item.Url = direct;
-                return true;
-            }
+            var url = _mirrors.RewriteWith(official, item.Category, kind);
+            if (!string.IsNullOrWhiteSpace(url)) candidates.Add(url);
+        }
+        // 官方源恒等变换，放在最后兜底（它一定有文件，只是可能慢）
+        candidates.Add(_mirrors.RewriteWith(official, item.Category, MirrorKind.Official));
+
+        foreach (var candidate in candidates)
+        {
+            var host = HostOf(candidate);
+            if (host == currentHost) continue;
+            if (item.TriedHosts.Contains(host, StringComparer.OrdinalIgnoreCase)) continue;
+            if (_health.IsDegraded(host)) continue;
+            item.Url = candidate;
+            return true;
         }
 
-        // 已经换过几次了？按顺序取下一个
-        var order = _mirrors.FailoverOrder(item.Category);
-        var nextKind = order.FirstOrDefault(kind =>
+        // 所有候选这一轮都被挡住了：也绝不能留在刚 403 / 429 的地址上原地重试。
+        // 外层退避会照着 item.Url 再打一次，于是 403 越撞越狠、最后变成 429——
+        // 日志里「403 → 403 → 429」就是这么来的。官方地址一定有文件，只是可能慢，
+        // 强制切回去并清空已试列表，让这一轮成为全新的开始。
+        var fallback = _mirrors.RewriteWith(official, item.Category, MirrorKind.Official);
+        if (!string.IsNullOrWhiteSpace(fallback) && HostOf(fallback) != currentHost)
         {
-            var candidate = _mirrors.RewriteWith(official, item.Category, kind);
-            return !string.IsNullOrWhiteSpace(candidate)
-                   && HostOf(candidate) != currentHost
-                   && !_health.IsDegraded(HostOf(candidate));
-        });
-
-        // 所有镜像都试过还没找到 → 直接用官方地址
-        var target = nextKind != default
-            ? _mirrors.RewriteWith(official, item.Category, nextKind)
-            : official;
-
-        if (string.IsNullOrWhiteSpace(target) || HostOf(target) == currentHost) return false;
-
-        item.Url = target;
-        return true;
+            item.TriedHosts.Clear();
+            item.Url = fallback;
+            return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -1060,7 +1368,7 @@ public sealed class DownloadManager
         if (string.IsNullOrWhiteSpace(official)) return;
         var currentHost = HostOf(item.Url);
 
-        foreach (var kind in _mirrors.FailoverOrder(item.Category))
+        foreach (var kind in _mirrors.FailoverOrder(item.Category, official))
         {
             var candidate = _mirrors.RewriteWith(official, item.Category, kind);
             if (string.IsNullOrWhiteSpace(candidate)) continue;

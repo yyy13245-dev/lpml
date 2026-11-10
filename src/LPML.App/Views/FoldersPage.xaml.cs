@@ -1,4 +1,5 @@
 ﻿using LPML.App.Windows;
+using LPML.App.Services;
 using LPML.Core;
 using LPML.Core.Download;
 using LPML.Core.Instances;
@@ -99,6 +100,24 @@ public partial class FoldersPage : UserControl, IRefreshablePage
 
         // 按物理目录扫描，不读共享 .minecraft 的缓存
         VersionCountText.Text = L.F("String.Folder.VersionCount", Context.InstalledVersionsIn(path).Count);
+
+        // 存储方式区块始终可见；即便布局数据读取失败也不留白，用户仍可手动切换
+        LayoutSection.Visibility = Visibility.Visible;
+        try
+        {
+            var layout = Context.FolderLayoutFor(id);
+            var modeName = L.T(layout == "merged"
+                ? "String.Folder.LayoutMergedName" : "String.Folder.LayoutSplitName");
+            LayoutText.Text = L.F("String.Folder.LayoutCurrent", modeName);
+            LayoutToggleButton.Content = L.T(layout == "merged"
+                ? "String.Folder.LayoutToSplit" : "String.Folder.LayoutToMerged");
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("Folder", "Read layout failed: " + ex.Message);
+            LayoutText.Text = L.F("String.Folder.LayoutCurrent", L.T("String.Folder.LayoutSplitName"));
+            LayoutToggleButton.Content = L.T("String.Folder.LayoutToMerged");
+        }
         StatusText.Text = "";
     }
 
@@ -110,6 +129,7 @@ public partial class FoldersPage : UserControl, IRefreshablePage
         Context.CurrentFolderId = row.Folder.Id;
         Refresh();
         Notice.Info(L.F("String.Folder.SetCurrentDone", row.Name));
+        ToastService.Success(L.T("String.Toast.Done"));
     }
 
     /// <summary>新建文件夹：只登记目录并切过去，绝不改动任何现有实例的归属。</summary>
@@ -189,6 +209,32 @@ public partial class FoldersPage : UserControl, IRefreshablePage
         if (window.ShowDialog() == true) Refresh();
     }
 
+    /// <summary>整夹在「分离存储」与「合在一起存储（PCL / HMCL 式）」之间切换。</summary>
+    private async void LayoutToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        var row = Current;
+        if (row is null) return;
+        var id = row.Folder.Id;
+        var next = Context.FolderLayoutFor(id) == "merged" ? "split" : "merged";
+        LayoutToggleButton.IsEnabled = false;
+        try
+        {
+            var changed = await ToastService.RunAsync(
+                L.T("String.Toast.Working"),
+                () => Task.Run(() => Context.SetFolderLayout(id, next))).ConfigureAwait(true);
+            StatusText.Text = L.F("String.Folder.LayoutDone", changed);
+            ToastService.Success(L.T("String.Toast.Done"));
+            Refresh();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Folder", "Switch layout failed", ex);
+            StatusText.Text = L.T("String.Msg.Common.Failed") + ex.Message;
+            ToastService.Failure(L.T("String.Toast.Failed"));
+        }
+        finally { LayoutToggleButton.IsEnabled = true; }
+    }
+
     /// <summary>只移除登记，不动磁盘文件；里面还有实例时拒绝，避免留下指向空目录的实例。</summary>
     private void DeleteFolder_OnClick(object sender, RoutedEventArgs e)
     {
@@ -248,12 +294,16 @@ public partial class FoldersPage : UserControl, IRefreshablePage
             var progress = new Progress<DownloadAggregate>(agg =>
                 StatusText.Text = L.F("String.InstanceSettings.CompletingProgress", agg.Completed, agg.Total));
 
-            var count = await App.GameLauncher.CompleteFilesAsync(
+            var result = await App.GameLauncher.CompleteFilesAsync(
                 instance, progress, CancellationToken.None, target);
-            StatusText.Text = count == 0
-                ? L.T("String.InstanceSettings.InstallUpToDate")
-                : L.F("String.InstanceSettings.InstallDone", count, target);
+            if (!result.Success)
+                StatusText.Text = result.Message!;
+            else if (result.Count == 0)
+                StatusText.Text = L.T("String.InstanceSettings.InstallUpToDate");
+            else
+                StatusText.Text = L.F("String.InstanceSettings.InstallDone", result.Count, target);
             VersionCountText.Text = L.F("String.Folder.VersionCount", Context.InstalledVersionsIn(target).Count);
+            ToastService.Success(L.T("String.Toast.Done"));
         }
         catch (Exception ex)
         {

@@ -97,7 +97,9 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.CanContentScroll="False"
                      ItemTemplateSelector="{StaticResource TaskCardSelector}"
-                     SelectionChanged="TaskList_OnSelectionChanged">
+                     SelectionChanged="TaskList_OnSelectionChanged"
+                     MouseLeftButtonUp="TaskList_OnMouseLeftButtonUp"
+                     ContextMenuOpening="TaskList_OnContextMenuOpening">
                 <ListBox.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="{DynamicResource String.Task.Retry}" Click="TaskRetry_OnClick"/>

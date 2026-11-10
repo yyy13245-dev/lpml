@@ -206,24 +206,26 @@ public sealed class JavaService
         return options.OrderByDescending(o => o.IsSuggested).ToList();
     }
 
-    /// <summary>返回运行时目录下的 java 可执行文件路径（Windows 用 javaw.exe）。按平台键查找。</summary>
+    /// <summary>返回运行时目录下的 java 可执行文件路径。按平台键查找，兼容不带 .exe 后缀的运行时。</summary>
     public string? FindRuntimeJava(string component, JavaArch arch = JavaArch.Unknown)
     {
         if (arch == JavaArch.Unknown) arch = JavaArchitecture.Suggest(Manager?.Javas);
         var platformKey = JavaArchitecture.PlatformKey(JavaArchitecture.OsPrefix, arch);
         var root = Path.Combine(RuntimeRoot, component, platformKey);
-        var exe = OperatingSystem.IsWindows() ? "javaw.exe" : "java";
-        var direct = Path.Combine(root, "bin", exe);
-        if (File.Exists(direct)) return direct;
-        var home = Path.Combine(root, "jre", "bin", exe);
-        if (File.Exists(home)) return home;
-        try
+        foreach (var exe in JavaLocator.ExeNames)
         {
-            foreach (var file in Directory.EnumerateFiles(root, exe, SearchOption.AllDirectories))
-                return file;
+            var direct = Path.Combine(root, "bin", exe);
+            if (File.Exists(direct)) return direct;
+            var home = Path.Combine(root, "jre", "bin", exe);
+            if (File.Exists(home)) return home;
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(root, exe, SearchOption.AllDirectories))
+                    return file;
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
         return null;
     }
 

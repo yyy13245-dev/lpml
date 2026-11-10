@@ -62,6 +62,12 @@ public partial class GameLogWindow : Window
     private int _total;
     private readonly List<int> _ports = new();
 
+    /// <summary>
+    /// 调试会话窗口：保留本次会话从开始到结束的每一行，不做滚动截断。
+    /// 普通查看窗口仍按 5000 行上限裁剪，避免长时间挂着吃掉内存。
+    /// </summary>
+    public bool KeepFullHistory { get; set; }
+
     public GameLogWindow()
     {
         InitializeComponent();
@@ -71,7 +77,31 @@ public partial class GameLogWindow : Window
         UpdateStatus();
     }
 
-    /// <summary>游戏进程结束后调用，去掉「运行中」标记。</summary>
+    /// <summary>
+    /// 标记本次调试会话：标题带实例名与开始时间，多个窗口互不覆盖。
+    /// </summary>
+    public void SetSession(string instanceName, DateTime startedAt)
+    {
+        KeepFullHistory = true;
+        Title = Lang.F("String.GameLog.SessionTitle", instanceName, startedAt.ToString("HH:mm:ss"));
+        TitleText.Text = Title;
+        RunningBadge.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>把游戏会话开始前已经产生的输出补进窗口（从游戏开始一直记录）。</summary>
+    public void AppendHistory(IEnumerable<string> lines)
+    {
+        foreach (var line in lines) AppendRaw(line);
+    }
+
+    /// <summary>写入一行未解析的原始输出（启动阶段状态、退出码、JVM 原生报错都走这里）。</summary>
+    public void AppendRaw(string? line)
+    {
+        if (string.IsNullOrEmpty(line)) return;
+        Append(GameLogMonitor.Parse(line));
+    }
+
+    /// <summary>游戏进程结束后调用，去掉「运行中」标记；窗口本身保留，日志不清空。</summary>
     public void MarkStopped()
     {
         RunningBadge.Visibility = Visibility.Collapsed;
@@ -104,6 +134,8 @@ public partial class GameLogWindow : Window
 
     private void Trim()
     {
+        // 调试窗口保留全部输出：从启动到退出，一行都不覆盖
+        if (KeepFullHistory) return;
         const int cap = 5000;
         while (_view.Count > cap) _view.RemoveAt(0);
         while (_all.Count > cap) _all.RemoveAt(0);

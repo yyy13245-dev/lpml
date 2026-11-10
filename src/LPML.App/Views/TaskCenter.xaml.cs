@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using LPML.App.Services;
 using LPML.Core;
@@ -26,7 +27,7 @@ public sealed class TaskCardTemplateSelector : DataTemplateSelector
 /// <summary>
 /// 任务中心（三级）：
 /// 一级是任务组列表（一次下载 / 一次安装 = 一个任务）；
-/// 二级「下载」按大类汇总（整合包内容 / 原版内容），每类一个独立进度条；
+/// 二级「下载」按大类汇总（整合包内容 / 原版内容 / 加载器内容），每类一个独立进度条；
 /// 三级点进分类看每个文件的实时下载进度；「安装」点进去是步骤流程图。
 /// </summary>
 public partial class TaskCenter : UserControl
@@ -42,6 +43,7 @@ public partial class TaskCenter : UserControl
     private readonly ObservableCollection<FlowStepView> _flow = new();
 
     private DownloadTask? _opened;
+    private DownloadTask? _selectedTask;
     private string? _openedGroupKey;
     private readonly DispatcherTimer _timer;
     private bool _dirty;
@@ -91,6 +93,21 @@ public partial class TaskCenter : UserControl
             if (!tasks.Any(t => t.Id == _tasks[i].Id)) _tasks.RemoveAt(i);
         foreach (var task in tasks)
             if (!_tasks.Any(t => t.Id == task.Id)) _tasks.Add(task);
+
+        // 一级卡片绑的是计算属性，不主动发通知就会永远停在「等待中 23/76」，
+        // 而点进去的详情页已经是「已完成」。
+        foreach (var task in _tasks)
+        {
+            // 所有文件都已落地却没收到结束事件时，别让一级卡片永远停在「等待中」。
+            // 暂停 / 失败 / 取消的文件不算落地，标完成会让里面和外面显示不一致。
+            if (!task.Finished)
+            {
+                var items = task.SnapshotItems();
+                if (items.Count > 0 && items.All(i => i.Status is DownloadStatus.Completed or DownloadStatus.Skipped))
+                    task.Finished = true;
+            }
+            task.NotifyComputed();
+        }
 
         if (_opened is null) return;
         if (DetailTitle is null || ItemList is null || StepList is null || GroupList is null) return;
@@ -152,8 +169,8 @@ public partial class TaskCenter : UserControl
     }
 
     /// <summary>
-    /// 把任务里的文件按 Section 聚合成两三个大类。只显示实际有文件的分类，
-    /// 顺序固定为 整合包内容 → 原版内容 → 其他文件。
+    /// 把任务里的文件按 Section 聚合成几个大类。只显示实际有文件的分类，
+    /// 顺序固定为 整合包内容 → 原版内容 → 加载器内容 → 其他文件。
     /// </summary>
     private void SyncGroups(List<DownloadItem> allItems)
     {
@@ -161,6 +178,7 @@ public partial class TaskCenter : UserControl
         {
             DownloadSections.PackContent,
             DownloadSections.VanillaContent,
+            DownloadSections.LoaderContent,
             DownloadSections.General
         };
 
@@ -210,6 +228,8 @@ public partial class TaskCenter : UserControl
                 Lang.T("String.Task.GroupPack"), Lang.T("String.Task.GroupPackHint")),
             DownloadSections.VanillaContent => ("🎮",
                 Lang.T("String.Task.GroupVanilla"), Lang.T("String.Task.GroupVanillaHint")),
+            DownloadSections.LoaderContent => ("🧩",
+                Lang.T("String.Task.GroupLoader"), Lang.T("String.Task.GroupLoaderHint")),
             _ => ("📄",
                 Lang.T("String.Task.GroupGeneral"), Lang.T("String.Task.GroupGeneralHint"))
         };
@@ -302,10 +322,39 @@ public partial class TaskCenter : UserControl
         if (FlowView is not null) FlowView.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// 选中变化只记录，不再切视图。右键选中同样会触发 SelectionChanged，
+    /// 以前一选中就把列表隐藏、展开详情，右键菜单还没弹出来就被切走了。
+    /// 进入详情改由左键抬起显式触发，这样同一个任务反复点也进得去。
+    /// </summary>
     private void TaskList_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        => _selectedTask = TaskList?.SelectedItem as DownloadTask;
+
+    private void TaskList_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (!_ready || TaskList is null || HeaderList is null || HeaderDetail is null || DetailTabs is null || DetailTitle is null) return;
-        if (TaskList.SelectedItem is not DownloadTask task) return;
+        if (e.ChangedButton != MouseButton.Left) return;
+        if (TaskFromSource(e.OriginalSource) is { } task) OpenTask(task);
+    }
+
+    /// <summary>右键默认不选中 ListBoxItem，菜单要作用于右击命中的那个任务。</summary>
+    private void TaskList_OnContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        var hit = TaskFromSource(Mouse.DirectlyOver as DependencyObject)
+                  ?? TaskFromSource(e.OriginalSource);
+        if (hit is not null && TaskList is not null) TaskList.SelectedItem = hit;
+    }
+
+    private static DownloadTask? TaskFromSource(object? source)
+    {
+        for (var d = source as DependencyObject; d is not null; d = VisualTreeHelper.GetParent(d))
+            if (d is ListBoxItem item) return item.DataContext as DownloadTask;
+        return null;
+    }
+
+    private void OpenTask(DownloadTask task)
+    {
+        if (!_ready || TaskList is null || HeaderList is null || HeaderDetail is null
+            || DetailTabs is null || DetailTitle is null) return;
         _opened = task;
         ResetDetailViews();
         HeaderList.Visibility = Visibility.Collapsed;
@@ -362,7 +411,15 @@ public partial class TaskCenter : UserControl
     private void Close_OnClick(object sender, RoutedEventArgs e)
         => (Window.GetWindow(this) as MainWindow)?.HideTaskCenter();
 
-    private void Pause_OnClick(object sender, RoutedEventArgs e) { Context.Downloads.Pause(); Refresh(); }
+    // 最外层（任务列表）作用于全部任务；已经进了某个任务的详情，
+    // 所有按钮都只作用于这一个任务，不能把别的任务的下载一起清掉。
+
+    private void Pause_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_opened is { } task) Context.Downloads.PauseTask(task);
+        else Context.Downloads.Pause();
+        Refresh();
+    }
 
     private void Resume_OnClick(object sender, RoutedEventArgs e) => _ = ResumeAsync();
 
@@ -370,7 +427,14 @@ public partial class TaskCenter : UserControl
     {
         try
         {
-            await Context.Downloads.ResumeIncompleteAsync().ConfigureAwait(false);
+            if (_opened is { } task)
+            {
+                var pending = task.SnapshotItems().Where(i => i.Status is DownloadStatus.Pending
+                    or DownloadStatus.Paused or DownloadStatus.Failed or DownloadStatus.Canceled).ToList();
+                if (pending.Count > 0)
+                    await Context.Downloads.RunItemsAsync(pending, task).ConfigureAwait(false);
+            }
+            else await Context.Downloads.ResumeIncompleteAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -384,15 +448,33 @@ public partial class TaskCenter : UserControl
 
     private void ResumeIncomplete_OnClick(object sender, RoutedEventArgs e) => _ = ResumeAsync();
 
-    private void Cancel_OnClick(object sender, RoutedEventArgs e) { Context.Downloads.CancelAll(); Refresh(); }
+    private void Cancel_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_opened is { } task) Context.Downloads.CancelTask(task);
+        else Context.Downloads.CancelAll();
+        Refresh();
+    }
 
     private void Clear_OnClick(object sender, RoutedEventArgs e)
     {
-        Context.Downloads.ClearFinishedTasks();
-        // 还有文件在下载时不要清空队列，否则会把别的任务正在跑的项一起抹掉
-        if (!Context.Downloads.Items.Any(i => i.IsActive))
-            Context.Downloads.Clear();
-        Back_OnClick(sender, e);
+        if (_opened is { } task)
+        {
+            Context.Downloads.ClearTask(task);
+            _opened = null;
+            ResetDetailViews();
+            TaskList.SelectedItem = null;
+            HeaderList.Visibility = Visibility.Visible;
+            HeaderDetail.Visibility = Visibility.Collapsed;
+            TaskList.Visibility = Visibility.Visible;
+            DetailTabs.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            Context.Downloads.ClearFinishedTasks();
+            // 还有文件在下载时不要清空队列，否则会把别的任务正在跑的项一起抹掉
+            if (!Context.Downloads.Items.Any(i => i.IsActive))
+                Context.Downloads.Clear();
+        }
         Refresh();
     }
 
@@ -403,7 +485,7 @@ public partial class TaskCenter : UserControl
         if (e.Source is not MenuItem menu) return null;
         if (menu.Parent is not ContextMenu cm) return null;
         if (cm.PlacementTarget is not ListBox list) return null;
-        return new CurrentTaskTarget(list, list.SelectedItem as DownloadTask);
+        return new CurrentTaskTarget(list, list.SelectedItem as DownloadTask ?? _selectedTask);
     }
 
     private sealed record CurrentTaskTarget(ListBox List, DownloadTask? Task);

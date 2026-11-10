@@ -43,7 +43,7 @@ public sealed class LaunchArgumentBuilder
             var artifact = lib.Downloads?.Artifact;
             var path = artifact?.Path ?? MavenHelper.ToPath(pureName, null, ext);
             var full = _paths.LibraryPath(path);
-            if (File.Exists(full)) entries.Add(full);
+            if (FileHelper.IsUsableLibraryFile(full)) entries.Add(full);
             else if (lib.SkipMissing != true) missing.Add(full);
 
             if (lib.Natives is not null)
@@ -80,7 +80,7 @@ public sealed class LaunchArgumentBuilder
 
             var nativePath = native.Path ?? MavenHelper.ToPath(lib.Name, classifier, "jar");
             var full = _paths.LibraryPath(nativePath);
-            if (!File.Exists(full)) continue;
+            if (!FileHelper.IsUsableLibraryFile(full)) continue;
 
             try
             {
@@ -109,7 +109,11 @@ public sealed class LaunchArgumentBuilder
         var args = new List<string>
         {
             $"-Xms{options.MinMemoryMb}M",
-            $"-Xmx{options.MaxMemoryMb}M"
+            $"-Xmx{options.MaxMemoryMb}M",
+            // Java 在中文 Windows 上默认按 GBK 输出到 stdout/stderr，
+            // 启动器按 UTF-8 读就会变成乱码，错误信息完全看不清（JDK 18+ 生效）。
+            "-Dstdout.encoding=UTF-8",
+            "-Dstderr.encoding=UTF-8"
         };
 
         // 版本 JSON 自带的 JVM 参数（含规则）

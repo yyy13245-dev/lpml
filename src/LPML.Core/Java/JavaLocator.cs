@@ -31,8 +31,8 @@ public static class JavaLocator
         var pathVariable = Environment.GetEnvironmentVariable("PATH") ?? "";
         foreach (var dir in pathVariable.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {
-            try { TryAdd(Path.Combine(dir, "javaw.exe"), JavaSource.Environment); } catch { }
-            try { TryAdd(Path.Combine(dir, "java.exe"), JavaSource.Environment); } catch { }
+            foreach (var name in ExeNames)
+                try { TryAdd(Path.Combine(dir, name), JavaSource.Environment); } catch { }
         }
 
         // 常见安装目录
@@ -55,25 +55,36 @@ public static class JavaLocator
                 if (!Directory.Exists(vendorDir)) continue;
                 foreach (var jdkDir in SafeEnumerateDirectories(vendorDir))
                 {
-                    TryAdd(Path.Combine(jdkDir, "bin", "javaw.exe"), JavaSource.Scan);
-                    TryAdd(Path.Combine(jdkDir, "bin", "java.exe"), JavaSource.Scan);
+                    foreach (var name in ExeNames)
+                        TryAdd(Path.Combine(jdkDir, "bin", name), JavaSource.Scan);
                 }
             }
         }
 
-        // 用户额外指定 / 游戏目录 runtime
+        // 用户额外指定 / 游戏目录 runtime。
+        // extraDirectories 里可能直接是一个可执行文件路径（设置页「Java 路径」输入框）：
+        // 旧代码一律当作目录再拼 bin/javaw.exe，导致手动填写的路径永远探测不到。
         foreach (var dir in extraDirectories ?? Array.Empty<string>())
         {
             if (string.IsNullOrWhiteSpace(dir)) continue;
-            TryAdd(Path.Combine(dir, "bin", "javaw.exe"), JavaSource.Manual);
-            TryAdd(Path.Combine(dir, "bin", "java.exe"), JavaSource.Manual);
-            TryAdd(Path.Combine(dir, "javaw.exe"), JavaSource.Manual);
-            TryAdd(Path.Combine(dir, "java.exe"), JavaSource.Manual);
+            if (File.Exists(dir))
+            {
+                TryAdd(dir, JavaSource.Manual);
+                continue;
+            }
+            if (!Directory.Exists(dir)) continue;
+            foreach (var name in ExeNames)
+            {
+                TryAdd(Path.Combine(dir, "bin", name), JavaSource.Manual);
+                TryAdd(Path.Combine(dir, name), JavaSource.Manual);
+            }
             foreach (var sub in SafeEnumerateDirectories(dir))
             {
-                TryAdd(Path.Combine(sub, "bin", "javaw.exe"), JavaSource.GameRuntime);
-                TryAdd(Path.Combine(sub, "bin", "java.exe"), JavaSource.GameRuntime);
-                TryAdd(Path.Combine(sub, "runtime", "bin", "javaw.exe"), JavaSource.GameRuntime);
+                foreach (var name in ExeNames)
+                {
+                    TryAdd(Path.Combine(sub, "bin", name), JavaSource.GameRuntime);
+                    TryAdd(Path.Combine(sub, "runtime", "bin", name), JavaSource.GameRuntime);
+                }
             }
         }
 
@@ -87,18 +98,25 @@ public static class JavaLocator
         catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
     }
 
-    /// <summary>当前平台的 java 可执行文件名（Windows 优先 javaw.exe，无控制台窗口）。</summary>
+    /// <summary>当前平台首选的 java 可执行文件名（Windows 优先 javaw.exe，无控制台窗口）。</summary>
     public static string ExeName => OperatingSystem.IsWindows() ? "javaw.exe" : "java";
 
-    /// <summary>备选可执行文件名（Windows 的 java.exe 也在识别范围内）。</summary>
-    public static string[] ExeNames => OperatingSystem.IsWindows()
-        ? new[] { "javaw.exe", "java.exe" }
-        : new[] { "java" };
+    /// <summary>
+    /// 扫描时一并尝试的可执行文件名。不再按平台二选一：Wine 下 .NET 仍判定为 Windows，
+    /// 但用户可能使用不带 .exe 后缀的 java / javaw。不存在的名字由 File.Exists 直接跳过。
+    /// </summary>
+    public static string[] ExeNames => new[] { "javaw.exe", "java.exe", "javaw", "java" };
 
     private static string CombineJava(string? javaHome)
     {
         if (string.IsNullOrWhiteSpace(javaHome)) return "";
-        return Path.Combine(javaHome, "bin", ExeName);
+        var bin = Path.Combine(javaHome, "bin");
+        foreach (var name in ExeNames)
+        {
+            var candidate = Path.Combine(bin, name);
+            if (File.Exists(candidate)) return candidate;
+        }
+        return Path.Combine(bin, ExeName);
     }
 
     /// <summary>
@@ -139,7 +157,7 @@ public static class JavaLocator
         Add(picked);
         if (picked is null) return result.Values.ToList();
 
-        // 2) 同一个 JDK 根里的其他可执行文件（java.exe / javaw.exe 互通）
+        // 2) 同一个 JDK 根里的其他可执行文件（含不带 .exe 后缀的 java / javaw）
         if (!string.IsNullOrWhiteSpace(picked.JavaHome))
         {
             var bin = System.IO.Path.Combine(picked.JavaHome, "bin");

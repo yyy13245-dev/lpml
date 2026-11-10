@@ -23,6 +23,12 @@ public partial class LaunchProgressWindow : Window
 
     public CancellationToken Token => _cts.Token;
 
+    /// <summary>用户想看完整日志时触发：由启动编排打开独立的游戏日志窗口。</summary>
+    public event EventHandler? OpenFullLogRequested;
+
+    private void OpenFullLog_OnClick(object sender, RoutedEventArgs e)
+        => OpenFullLogRequested?.Invoke(this, EventArgs.Empty);
+
     // ── 阶段控制 ────────────────────────────────────────────
 
     public void SetStage(int stage)
@@ -91,5 +97,11 @@ public partial class LaunchProgressWindow : Window
     {
         _closed = true;
         base.OnClosing(e);
+    }
+
+    /// <summary>无边框窗口默认不能拖，这里让它跟着鼠标走（首次仍居中）。</summary>
+    private void Root_OnMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) DragMove();
     }
 }

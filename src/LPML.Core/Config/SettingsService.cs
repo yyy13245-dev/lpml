@@ -46,6 +46,8 @@ public sealed class SettingsService
         d.MaxChunksPerFile = Math.Clamp(d.MaxChunksPerFile, 1, 32);
         d.ChunkThresholdMb = Math.Clamp(d.ChunkThresholdMb, 0, 1024);
         d.RetryCount = Math.Clamp(d.RetryCount, 0, 10);
+        d.AutoRetryRounds = Math.Clamp(d.AutoRetryRounds, 0, 20);
+        d.AutoRetryDelaySeconds = Math.Clamp(d.AutoRetryDelaySeconds, 0, 3600);
         d.TimeoutSeconds = Math.Clamp(d.TimeoutSeconds, 5, 600);
         d.SpeedLimitKb = Math.Max(0, d.SpeedLimitKb);
 

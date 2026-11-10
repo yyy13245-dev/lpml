@@ -24,9 +24,11 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="{DynamicResource String.Download.Type}" VerticalAlignment="Center" Margin="0,0,10,0" Style="{StaticResource Text.Caption}"/>
-                                        <ComboBox x:Name="VersionTypeCombo" Width="120" SelectionChanged="VersionTypeCombo_OnSelectionChanged">
+                                        <ComboBox x:Name="VersionTypeCombo" Width="150" SelectionChanged="VersionTypeCombo_OnSelectionChanged">
                                             <ComboBoxItem Content="{DynamicResource String.Download.Release}" IsSelected="True"/>
                                             <ComboBoxItem Content="{DynamicResource String.Download.Snapshot}"/>
+                                            <ComboBoxItem Content="{DynamicResource String.Download.AprilFools}"/>
+                                            <ComboBoxItem Content="{DynamicResource String.Download.Legacy}"/>
                                             <ComboBoxItem Content="{DynamicResource String.Download.All}"/>
                                         </ComboBox>
                                     </StackPanel>
@@ -34,6 +36,8 @@
                                 </Grid>
 
                                 <ListBox x:Name="VersionList" Margin="0,16,0,0" Height="280" SelectionMode="Single"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
                                          MouseDoubleClick="VersionList_OnDoubleClick">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
@@ -43,11 +47,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0">
-                                                    <TextBlock Text="{Binding Id}" FontWeight="SemiBold" FontSize="13.5"/>
-                                                    <TextBlock Text="{Binding ReleaseTime}" FontSize="11"
+                                                    <TextBlock Text="{Binding Id, Mode=OneWay}" FontWeight="SemiBold" FontSize="13.5"/>
+                                                    <TextBlock Text="{Binding ReleaseTime, Mode=OneWay}" FontSize="11"
                                                                Foreground="{DynamicResource Brush.ForegroundMuted}" Margin="0,2,0,0"/>
                                                 </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="{Binding Type}" FontSize="11" VerticalAlignment="Center"
+                                                <TextBlock Grid.Column="1" Text="{Binding TypeText, Mode=OneWay}" FontSize="11" VerticalAlignment="Center"
                                                            Foreground="{DynamicResource Brush.ForegroundSecondary}"/>
                                             </Grid>
                                         </DataTemplate>
@@ -59,6 +63,8 @@
 
                                 <TextBlock Text="{DynamicResource String.Download.ClickHint}" Style="{StaticResource Text.Caption}"
                                            TextWrapping="Wrap" Margin="0,14,0,0"/>
+                                <TextBlock Text="{DynamicResource String.Download.UnstableHint}" Style="{StaticResource Text.Caption}"
+                                           TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

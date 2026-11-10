@@ -226,6 +226,19 @@ public sealed class DownloadSettings
     public List<string?>? ExtraLibraryDirectories { get; set; }
 
     public int RetryCount { get; set; } = 3;
+
+    /// <summary>
+    /// 一轮下载结束后，把仍然失败的文件整体重新排队，不再需要逐个点重试。
+    /// 与 RetryCount（单个文件失败后的即时重试）互不影响。
+    /// </summary>
+    public bool EnableAutoRetryRound { get; set; } = true;
+
+    /// <summary>最多自动重下几轮；0 表示不自动重下。</summary>
+    public int AutoRetryRounds { get; set; } = 3;
+
+    /// <summary>每轮自动重下之前等待的秒数。</summary>
+    public int AutoRetryDelaySeconds { get; set; } = 5;
+
     public int TimeoutSeconds { get; set; } = 30;
 
     /// <summary>限速，单位 KB/s，0 表示不限。</summary>
@@ -239,7 +252,7 @@ public sealed class DownloadSettings
     public bool CleanChunkFiles { get; set; } = true;
 
     /// <summary>HTTP 用户代理，部分镜像对 UA 有要求。</summary>
-    public string UserAgent { get; set; } = "LPML/1.0";
+    public string UserAgent { get; set; } = "LPML/0.0.001";
 
     /// <summary>代理设置，留空则跟随系统。</summary>
     public bool UseProxy { get; set; } = false;

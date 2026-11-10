@@ -8,6 +8,9 @@
                 <StackPanel>
                     <TextBlock x:Name="VersionTitle" Text="—" FontWeight="SemiBold" FontSize="19"/>
                     <TextBlock x:Name="VersionMeta" Text="—" Style="{StaticResource Text.Caption}" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="UnstableHintText" Text="{DynamicResource String.Install.UnstableHint}"
+                               Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
 

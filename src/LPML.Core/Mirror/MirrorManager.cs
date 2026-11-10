@@ -56,11 +56,34 @@ public sealed class MirrorManager
     /// 换源重试的候选顺序：当前源之外的其他镜像，官方源兜底。
     /// 镜像缺文件（403/404）时按这个顺序逐个试，而不是对着同一个源死磕。
     /// </summary>
-    public List<MirrorKind> FailoverOrder(ResourceCategory category)
+    public List<MirrorKind> FailoverOrder(ResourceCategory category, string? officialUrl = null)
     {
         var current = _settings.Resolve(category);
         // MCBBS 已停止服务，彻底不参与故障转移；只从当前可用源里挑。
         var others = MirrorSettings.SupportedKinds.Where(k => k != current).ToList();
+
+        // 第三方 maven（Fabric / Forge / Quilt / NeoForge）的构件在 BMCLAPI 的
+        // /maven 下经常被 WAF 判 403：官方文档与 HMCL 都确认路径是 /maven，
+        // 镜像上也确实同步了 fabric-loader，所以不是路径错、也不是没同步，
+        // 而是它对这些构件的请求特征（UA / 302 签名节点 / Range）拦截较严。
+        // 这类构件干脆不进 BMCLAPI 候选：光速镜像有专属域名，官方源一定有文件。
+        // 否则 403 之后外层继续在这个域名上退避重试，很快就会撞成 429。
+        if (!string.IsNullOrWhiteSpace(officialUrl)
+            && Uri.TryCreate(officialUrl, UriKind.Absolute, out var uri)
+            && (uri.Host.EndsWith("fabricmc.net", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.EndsWith("minecraftforge.net", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.EndsWith("neoforged.net", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.EndsWith("quiltmc.org", StringComparison.OrdinalIgnoreCase)))
+        {
+            others = others.Where(k => k != MirrorKind.BMCLAPI).ToList();
+            static int Rank(MirrorKind k) => k switch
+            {
+                MirrorKind.FastMCMirror => 0,
+                MirrorKind.Official => 1,
+                _ => 99
+            };
+            return others.OrderBy(Rank).ToList();
+        }
 
         // 资源文件（assets）第三方镜像普遍同步不全或已关闭镜像，
         // 官方 CDN 一定有文件，优先兜底，别让几千个 ogg 逐个试错。

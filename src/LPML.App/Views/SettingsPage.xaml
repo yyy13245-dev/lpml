@@ -45,6 +45,8 @@
                     </Grid>
                     <TextBlock Text="{DynamicResource String.Settings.FastMCMirrorHint}" Style="{StaticResource Text.Caption}"
                                TextWrapping="Wrap" Margin="0,8,0,0" FontSize="11"/>
+                    <TextBlock Text="{DynamicResource String.Settings.BmclapiCredit}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,10,0,0" FontSize="11"/>
                 </StackPanel>
             </Expander>
 
@@ -79,6 +81,28 @@
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="{DynamicResource String.Settings.RetryCount}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
                             <TextBox x:Name="RetryBox" LostFocus="Setting_OnChanged"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 一轮结束后把失败文件整体重新排队，不用逐个点重试 -->
+                    <CheckBox x:Name="AutoRetryRoundCheck" Style="{StaticResource Switch}" Margin="0,14,0,0"
+                              Content="{DynamicResource String.Settings.AutoRetryBatch}"
+                              Checked="Setting_OnChanged" Unchecked="Setting_OnChanged"/>
+                    <TextBlock Text="{DynamicResource String.Settings.AutoRetryBatchHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,4,0,0" FontSize="10.5"/>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource String.Settings.AutoRetryRounds}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                            <TextBox x:Name="AutoRetryRoundsBox" LostFocus="Setting_OnChanged"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="{DynamicResource String.Settings.AutoRetryDelay}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                            <TextBox x:Name="AutoRetryDelayBox" LostFocus="Setting_OnChanged"/>
                         </StackPanel>
                     </Grid>
 
@@ -389,14 +413,16 @@
 
                     <Separator Margin="0,18,0,14" Background="{DynamicResource Brush.Border}" Height="1"/>
 
-                    <TextBlock Text="{DynamicResource String.Settings.JavaPathHint}" Style="{StaticResource Text.Caption}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{DynamicResource String.Settings.JavaPathHint}" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0" x:Name="JavaPathBox" LostFocus="Setting_OnChanged"/>
                         <Button Grid.Column="1" Style="{StaticResource Button.Base}" Content="{DynamicResource String.Settings.BrowseJava}" Margin="10,0,0,0" Padding="16,8" Click="BrowseJava_OnClick"/>
+                        <Button Grid.Column="2" Style="{StaticResource Button.Primary}" Content="{DynamicResource String.Java.AddByPath}" Margin="8,0,0,0" Padding="14,8" Click="AddJavaPath_OnClick"/>
                     </Grid>
                     <CheckBox x:Name="AutoJavaCheck" Style="{StaticResource Switch}" Content="{DynamicResource String.Settings.AutoDetectJava}" Margin="0,12,0,0"
                               Checked="Setting_OnChanged" Unchecked="Setting_OnChanged"/>

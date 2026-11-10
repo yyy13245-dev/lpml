@@ -505,7 +505,17 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
     // ── 启动 ────────────────────────────────────────────────
 
     private async void LaunchDebug_OnClick(object sender, RoutedEventArgs e)
-        => await LaunchAsync(true);
+    {
+        if (_instance is null)
+        {
+            Notice.Info(L.T("String.Msg.InstanceSettings.NoInstanceSelected"));
+            return;
+        }
+        // 调试模式：先开一个本次会话专用的独立日志窗口，再启动。
+        // 窗口从游戏开始一直记到结束，不复用、不清空，也不会被主窗口盖住。
+        App.GameLauncher.OpenDebugWindow(_instance);
+        await LaunchAsync(true);
+    }
 
     private async void LaunchNormal_OnClick(object sender, RoutedEventArgs e)
         => await LaunchAsync(false);
@@ -565,6 +575,12 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
 
     private async void QuickLaunchDebug_OnClick(object sender, RoutedEventArgs e)
     {
+        if (_instance is null)
+        {
+            Notice.Info(L.T("String.Msg.InstanceSettings.NoInstanceSelected"));
+            return;
+        }
+        App.GameLauncher.OpenDebugWindow(_instance);
         QuickLaunchStatus.Text = L.T("String.Msg.InstanceSettings.LaunchingDebug");
         await LaunchAsync(true);
         QuickLaunchStatus.Text = L.T("String.Msg.InstanceSettings.LaunchDone");
@@ -586,11 +602,20 @@ public partial class InstanceSettingsPage : UserControl, IRefreshablePage, IPara
 
             // 补到这个实例真正的工作目录：实例指向自己的文件夹时，
             // 不能把文件下到共享 .minecraft 里，否则补全完还是缺文件。
-            var count = await App.GameLauncher.CompleteFilesAsync(
+            var result = await App.GameLauncher.CompleteFilesAsync(
                 _instance, progress, CancellationToken.None, Context.WorkingDirectoryFor(_instance));
-            VerifyStatusText.Text = count == 0
-                ? L.T("String.Msg.InstanceSettings.AllComplete")
-                : L.F("String.Msg.InstanceSettings.CompleteDone", count);
+            if (!result.Success)
+            {
+                VerifyStatusText.Text = result.Message!;
+                // 版本 JSON 彻底丢了：提示里已经说了「请在下载中心重新安装」，
+                // 这里直接把人送过去，并预选好版本与加载器类型，点下载即可。
+                if (result.Message!.Contains(L.T("String.Download.Title"), StringComparison.Ordinal))
+                    (Window.GetWindow(this) as MainWindow)?.OpenVersionInstallFor(_instance);
+            }
+            else if (result.Count == 0)
+                VerifyStatusText.Text = L.T("String.Msg.InstanceSettings.AllComplete");
+            else
+                VerifyStatusText.Text = L.F("String.Msg.InstanceSettings.CompleteDone", result.Count);
         }
         catch (Exception ex)
         {

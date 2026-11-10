@@ -18,10 +18,10 @@ public enum DownloadStatus
 }
 
 /// <summary>
-/// 任务详情里「下载」页的两个大类。
+/// 任务详情里「下载」页的大类。
 /// 一次整合包安装会同时下整合包自己的文件（mrpack / 模组）和原版游戏文件
-/// （版本 JSON / 客户端 jar / 库 / 资源），全平铺在一个列表里会有几千行，
-/// 所以先按这个分区汇总，点进去再看单文件。
+/// （版本 JSON / 客户端 jar / 库 / 资源），装加载器时还有一批加载器专属库，
+/// 全平铺在一个列表里会有几千行，所以先按这个分区汇总，点进去再看单文件。
 /// 与细粒度的 Group（游戏本体 / 依赖库 / 资源文件…）互不冲突。
 /// </summary>
 public static class DownloadSections
@@ -32,7 +32,10 @@ public static class DownloadSections
     /// <summary>原版内容：版本 JSON、客户端 jar、依赖库、资源。</summary>
     public const string VanillaContent = "vanilla";
 
-    /// <summary>不属于上面两类的零散下载（Java 运行时、单独下的模组等）。</summary>
+    /// <summary>加载器内容：加载器 profile 自带的 Maven 依赖库（不在原版清单里）。</summary>
+    public const string LoaderContent = "loader";
+
+    /// <summary>不属于上面几类的零散下载（Java 运行时、单独下的模组等）。</summary>
     public const string General = "general";
 }
 
@@ -68,6 +71,26 @@ public sealed class DownloadItem : ObservableObject
     public string Section { get; set; } = DownloadSections.General;
 
     public int RetryUsed { get; set; }
+
+    /// <summary>
+    /// 本文件已经试过、且失败过的源主机名。换源时按它去重，
+    /// 避免在 403 / 429 / 停滞之间来回切回同一个地址把重试次数耗光。
+    /// 每个自动重下轮次开始时清空（间隔数秒后源可能已恢复）。
+    /// </summary>
+    public List<string> TriedHosts { get; } = new();
+
+    /// <summary>
+    /// 队列里只剩一两个文件时置真：允许降低分段体积门槛、放宽段数，
+    /// 免得「文件并发 = 1」时大文件只能单线程慢慢爬，还容易撞上单连接停滞。
+    /// </summary>
+    public bool IdleQueueBoost { get; set; }
+
+    /// <summary>
+    /// 强制重新下载：文件即使存在、大小与 SHA-1 都对，也要覆盖一遍。
+    /// 用于「jar 是合法 ZIP 但内容不是这个版本」这类情况——普通校验看不出来，
+    /// 只有检查启动主类是否真的在里面才发现，此时必须重新拉取而不是跳过。
+    /// </summary>
+    public bool ForceRedownload { get; set; }
 
     /// <summary>
     /// 这个文件属于哪一次安装任务。
@@ -126,9 +149,16 @@ public sealed class DownloadItem : ObservableObject
 
     public string SpeedText => FileHelper.HumanSpeed(Speed);
 
-    public CancellationTokenSource Cancellation { get; } = new();
+    private CancellationTokenSource _cancellation = new();
 
-    public void Cancel() => Cancellation.Cancel();
+    /// <summary>
+    /// 本文件的独立取消令牌。暂停会 Cancel 它，而 CTS 一旦取消就永久生效；
+    /// 所以每次重新排队都必须换一个新的，否则「继续」时下载会在第一帧立刻被取消，
+    /// 表现为只有没被暂停过的文件还能跑。
+    /// </summary>
+    public CancellationTokenSource Cancellation => _cancellation;
+
+    public void Cancel() => _cancellation.Cancel();
 
     /// <summary>重置为可重新下载的状态：清掉失败/取消标记、进度与已收字节。</summary>
     public void Reset()
@@ -139,6 +169,8 @@ public sealed class DownloadItem : ObservableObject
         Chunks = 0;
         RetryUsed = 0;
         Error = null;
+        TriedHosts.Clear();
+        _cancellation = new CancellationTokenSource();
         Status = DownloadStatus.Pending;
         StatusText = L.T("String.Core.Status.Queued");
     }

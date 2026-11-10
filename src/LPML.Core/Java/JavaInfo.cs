@@ -32,9 +32,20 @@ public sealed class JavaInfo
 
     public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.Now;
 
-    /// <summary>这个 Java 是不是带控制台的 java.exe（调试启动时要用它看输出）。</summary>
+    /// <summary>可执行文件名（去掉可能存在的 .exe 后缀，无后缀的 java / javaw 同样可识别）。</summary>
+    private string ExeBaseName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Path)) return "";
+            var name = System.IO.Path.GetFileName(Path);
+            return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
+        }
+    }
+
+    /// <summary>这个 Java 是不是带控制台的 java（调试启动时要用它看输出）。</summary>
     public bool IsConsoleVariant =>
-        Path.EndsWith("java.exe", StringComparison.OrdinalIgnoreCase);
+        ExeBaseName.Equals("java", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>显示名称：优先备注，否则 类型 版本 · 发布者 · 架构。</summary>
     public string Name =>
@@ -43,7 +54,7 @@ public sealed class JavaInfo
             : $"{TypeText} {MajorVersion} · {Vendor} · {(Is64Bit ? L.T("String.Core.Item.Bit64") : L.T("String.Core.Item.Bit32"))}";
 
     /// <summary>
-    /// 列表里区分 java.exe / javaw.exe 的显示名。
+    /// 列表里区分 java / javaw 的显示名（含不带 .exe 后缀的情形）。
     /// 同一个 JDK 会同时被扫出这两个，不标注的话列表里就是两条一模一样的名字。
     /// </summary>
     public string ListName
@@ -52,7 +63,7 @@ public sealed class JavaInfo
         {
             var baseName = Name;
             if (string.IsNullOrWhiteSpace(Path)) return baseName;
-            var exe = Path.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase) ? "javaw" : "java";
+            var exe = ExeBaseName.Equals("javaw", StringComparison.OrdinalIgnoreCase) ? "javaw" : "java";
             return $"{baseName}  [{exe}]";
         }
     }

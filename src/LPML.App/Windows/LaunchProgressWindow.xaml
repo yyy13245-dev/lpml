@@ -6,7 +6,8 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True">
     <Border Background="{DynamicResource Brush.Window}" CornerRadius="{DynamicResource Radius.Card}"
-            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+            MouseLeftButtonDown="Root_OnMouseLeftButtonDown">
         <Grid Margin="26,22">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -69,6 +70,8 @@
 
             <!-- 取消 -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource Button.Base}" Padding="18,8" Margin="0,0,8,0"
+                        Content="{DynamicResource String.Launch.OpenFullLog}" Click="OpenFullLog_OnClick"/>
                 <Button x:Name="CancelButton" Style="{StaticResource Button.Base}" Padding="18,8"
                         Content="{DynamicResource String.Msg.Common.Cancel}" Click="Cancel_OnClick"/>
             </StackPanel>

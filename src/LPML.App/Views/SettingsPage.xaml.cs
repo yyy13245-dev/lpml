@@ -123,6 +123,9 @@ public partial class SettingsPage : UserControl, IParameterizedPage, IRefreshabl
         ChunksBox.Text = s.Download.MaxChunksPerFile.ToString();
         ChunkThresholdBox.Text = s.Download.ChunkThresholdMb.ToString();
         RetryBox.Text = s.Download.RetryCount.ToString();
+        AutoRetryRoundCheck.IsChecked = s.Download.EnableAutoRetryRound;
+        AutoRetryRoundsBox.Text = s.Download.AutoRetryRounds.ToString();
+        AutoRetryDelayBox.Text = s.Download.AutoRetryDelaySeconds.ToString();
         RampUpCheck.IsChecked = s.Download.EnableRampUp;
         RampUpStartBox.Text = s.Download.RampUpStartCount.ToString();
         RampUpIntervalBox.Text = s.Download.RampUpIntervalMs.ToString();
@@ -427,6 +430,9 @@ public partial class SettingsPage : UserControl, IParameterizedPage, IRefreshabl
         s.Download.MaxChunksPerFile = Int(ChunksBox, 8);
         s.Download.ChunkThresholdMb = Int(ChunkThresholdBox, 8);
         s.Download.RetryCount = Int(RetryBox, 3);
+        s.Download.EnableAutoRetryRound = AutoRetryRoundCheck.IsChecked == true;
+        s.Download.AutoRetryRounds = Math.Clamp(Int(AutoRetryRoundsBox, 3), 0, 20);
+        s.Download.AutoRetryDelaySeconds = Math.Clamp(Int(AutoRetryDelayBox, 5), 0, 3600);
         s.Download.EnableRampUp = RampUpCheck.IsChecked == true;
         if (int.TryParse(RampUpStartBox.Text, out var rampStart)) s.Download.RampUpStartCount = Math.Clamp(rampStart, 1, 128);
         if (int.TryParse(RampUpIntervalBox.Text, out var rampMs)) s.Download.RampUpIntervalMs = Math.Clamp(rampMs, 0, 2000);
@@ -791,6 +797,34 @@ public partial class SettingsPage : UserControl, IParameterizedPage, IRefreshabl
         {
             JavaModeHint.Text = Lang.T("String.Java.ModeAutoHint");
         }
+    }
+
+    /// <summary>
+    /// 手动填写的 Java 路径：按可执行文件直接并入列表，不要求 .exe 后缀。
+    /// 适用于 Wine 下选用不带扩展名的 Java，以及 Linux / macOS 运行时。
+    /// </summary>
+    private void AddJavaPath_OnClick(object sender, RoutedEventArgs e)
+    {
+        var path = JavaPathBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            Notice.Warn(Lang.T("String.Java.AddByPathEmpty"));
+            return;
+        }
+        Setting_OnChanged(sender, e);   // 先把输入框内容写入 Java.JavaPath
+        var added = Context.Javas.Add(path);
+        RefreshJavaList();
+        if (added.Count > 0)
+        {
+            Notice.Info(Lang.F("String.Java.AddedCount", added.Count));
+            return;
+        }
+        string full;
+        try { full = System.IO.Path.GetFullPath(path); } catch { full = path; }
+        var alreadyListed = Context.Javas.Javas.Any(j =>
+            string.Equals(j.Path, full, StringComparison.OrdinalIgnoreCase));
+        if (alreadyListed) Notice.Info(Lang.T("String.Java.NoNewJava"));
+        else Notice.Warn(Lang.T("String.Java.AddFailed"));
     }
 
     private void BrowseJava_OnClick(object sender, RoutedEventArgs e)

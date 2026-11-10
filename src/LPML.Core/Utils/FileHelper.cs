@@ -27,6 +27,30 @@ public static class FileHelper
         catch (UnauthorizedAccessException) { }
     }
 
+    /// <summary>
+    /// 判断一个已落地的依赖文件是否可用：空文件一律不可用；.jar/.zip 必须是完整 ZIP。
+    /// 早期只检查开头 4 字节 PK\x03\x04，截断的归档、只剩一半的 jar、
+    /// 以及「前 4 字节碰巧是 PK」的坏文件都会被当成完整文件塞进 classpath，
+    /// JVM 读不到 central directory，启动后直接 ClassNotFoundException 退出代码 1。
+    /// 这里真正打开一次归档，让 System.IO.Compression 校验目录结构（只读目录，不解压内容）。
+    /// </summary>
+    public static bool IsUsableLibraryFile(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists || info.Length == 0) return false;
+            var ext = Path.GetExtension(path);
+            if (!string.Equals(ext, ".jar", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(ext, ".zip", StringComparison.OrdinalIgnoreCase)) return true;
+            using var zip = ZipFile.OpenRead(path);
+            return zip.Entries.Count >= 0;
+        }
+        catch (InvalidDataException) { return false; }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+    }
+
     public static long GetDirectorySize(string path)
     {
         long size = 0;

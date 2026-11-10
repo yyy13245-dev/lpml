@@ -333,11 +333,90 @@ public sealed class LauncherContext
             Log.Info("Context", L.F("String.Core.Log.Context.MigratedInstances", moved, current));
     }
 
+    private readonly Dictionary<string, string> _folderLayouts = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>布局记录放在该文件夹根下，拷走整个目录时也带着走。</summary>
+    private string LayoutFile(string folderId)
+    {
+        var path = Paths.GameDirectory;
+        if (!string.IsNullOrEmpty(folderId))
+        {
+            var folder = Folders.Find(folderId);
+            if (folder is not null) path = Folders.Resolve(folder);
+        }
+        return Path.Combine(path, "lpml-folder.json");
+    }
+
+    /// <summary>split = 版本文件与实例数据分开放；merged = 合在一起（PCL / HMCL 式）。默认 split。</summary>
+    public string FolderLayoutFor(string folderId)
+    {
+        var key = folderId ?? "";
+        if (_folderLayouts.TryGetValue(key, out var cached)) return cached;
+        var layout = "split";
+        try
+        {
+            var file = LayoutFile(key);
+            if (File.Exists(file))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
+                if (doc.RootElement.TryGetProperty("layout", out var v))
+                {
+                    var s = v.GetString();
+                    if (s == "split" || s == "merged") layout = s;
+                }
+            }
+        }
+        catch (Exception ex) { Log.Warn("Context", "Read folder layout failed: " + ex.Message); }
+        _folderLayouts[key] = layout;
+        return layout;
+    }
+
+    /// <summary>整夹切换存储方式；已有实例同步搬移，之后新建的实例自动跟随。</summary>
+    public int SetFolderLayout(string folderId, string layout)
+    {
+        if (layout != "split" && layout != "merged") return 0;
+        var key = folderId ?? "";
+        var root = Paths.GameDirectory;
+        if (!string.IsNullOrEmpty(key))
+        {
+            var folder = Folders.Find(key);
+            if (folder is not null) root = Folders.Resolve(folder);
+        }
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(LayoutFile(key), System.Text.Json.JsonSerializer.Serialize(
+                new Dictionary<string, string> { ["layout"] = layout }));
+        }
+        catch (Exception ex) { Log.Warn("Context", "Write folder layout failed: " + ex.Message); }
+        _folderLayouts[key] = layout;
+
+        var mode = layout == "merged"
+            ? LPML.Core.Instances.IsolationMode.Full
+            : LPML.Core.Instances.IsolationMode.UserData;
+        var changed = 0;
+        foreach (var inst in Instances.Instances
+                     .Where(i => string.Equals(i.FolderId ?? "", key, StringComparison.Ordinal)).ToList())
+        {
+            inst.IsolationModeOverride = mode;
+            try { Instances.MigrateIsolation(inst, root, mode); }
+            catch (Exception ex) { Log.Warn("Context", "Migrate folder layout failed: " + ex.Message); }
+            changed++;
+        }
+        Instances.Save();
+        return changed;
+    }
+
     /// <summary>该实例生效的隔离模式（实例级覆盖 > 全局设置）。</summary>
     public LPML.Core.Instances.IsolationMode IsolationModeFor(GameInstance? instance)
     {
         if (instance is null) return Settings.Paths.IsolationMode;
-        return instance.IsolationModeEffective(Settings.Paths.IsolationMode);
+        var effective = instance.IsolationModeEffective(Settings.Paths.IsolationMode);
+        // 实例自己没指定时，跟随所属文件夹的存储布局
+        if (instance.IsolationModeOverride is not null) return effective;
+        if (!string.IsNullOrWhiteSpace(instance.FolderId) && FolderLayoutFor(instance.FolderId) == "merged")
+            return LPML.Core.Instances.IsolationMode.Full;
+        return effective;
     }
 
     private readonly HashSet<string> _syncedFolderIds = new(StringComparer.Ordinal);
@@ -369,6 +448,8 @@ public sealed class LauncherContext
                     var instance = Instances.Create(version, version,
                         Settings.Paths.InstanceIsolation, folderId);
                     instance.FolderId = folderId;
+                    if (FolderLayoutFor(folderId) == "merged")
+                        instance.IsolationModeOverride = LPML.Core.Instances.IsolationMode.Full;
                     created++;
                 }
                 catch (Exception ex) { Log.Warn("Context", "Register folder instance failed: " + ex.Message); }

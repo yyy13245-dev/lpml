@@ -585,6 +585,29 @@ public partial class MainWindow : Window
     public void HideTaskCenter() => TaskPanel.Visibility = Visibility.Collapsed;
 
     /// <summary>
+    /// 版本文件丢失后：跳到下载中心，选中这个实例的版本，并按它原来的加载器
+    /// 预选类型，用户只需要点一下「下载」。找不到清单条目时只停在下载中心。
+    /// </summary>
+    public void OpenVersionInstallFor(LPML.Core.Instances.GameInstance instance)
+    {
+        Navigate("download");
+        var page = FindPage("download") as LPML.App.Views.DownloadPage;
+        var entry = page?.SelectVersion(instance.VersionId);
+        if (entry is null) return;
+
+        var text = instance.LoadersText ?? "";
+        string kind = "";
+        if (text.Contains("NeoForge", StringComparison.OrdinalIgnoreCase)) kind = "NeoForge";
+        else if (text.Contains("Forge", StringComparison.OrdinalIgnoreCase)) kind = "Forge";
+        else if (text.Contains("Fabric", StringComparison.OrdinalIgnoreCase)) kind = "Fabric";
+        else if (text.Contains("Quilt", StringComparison.OrdinalIgnoreCase)) kind = "Quilt";
+
+        var install = new LPML.App.Views.VersionInstallPage(this, entry);
+        if (!string.IsNullOrEmpty(kind)) install.PreselectLoader(kind);
+        NavigateToContent(install);
+    }
+
+    /// <summary>
     /// 悬浮按钮文案：始终用来"启动游戏"（允许多个实例并存）。
     /// 有实例在跑时额外显示「结束游戏」按钮，点开是可选实例的小展开板。
     /// </summary>

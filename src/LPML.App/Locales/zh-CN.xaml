@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML zh-CN 语言包 · 简体中文 -->
-    <!-- 词条 1424 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1485 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">准备中…</sys:String>
@@ -205,7 +205,7 @@
     <sys:String x:Key="String.Settings.OpenPortableAccount">打开便携账户文件夹</sys:String>
     <sys:String x:Key="String.Settings.MoveAllAccounts">把所有账户迁移到默认位置</sys:String>
     <sys:String x:Key="String.Settings.GroupJava">Java 与内存</sys:String>
-    <sys:String x:Key="String.Settings.JavaPathHint">Java 可执行文件（留空自动检测）</sys:String>
+    <sys:String x:Key="String.Settings.JavaPathHint">Java 可执行文件完整路径（留空自动检测；支持不带 .exe 后缀的路径，便于在 Wine / Linux / macOS 下选用 Java）</sys:String>
     <sys:String x:Key="String.Settings.BrowseJava">浏览</sys:String>
     <sys:String x:Key="String.Settings.AutoDetectJava">自动检测已安装的 Java</sys:String>
     <sys:String x:Key="String.Settings.AutoRuntime">找不到时自动使用官方运行时（.minecraft\runtime）</sys:String>
@@ -312,7 +312,7 @@
     <sys:String x:Key="String.Msg.Common.Cancelled">已取消</sys:String>
     <sys:String x:Key="String.Msg.Common.OpenDirFailed">打开目录失败：</sys:String>
     <sys:String x:Key="String.Msg.Common.PickJava">选择 Java</sys:String>
-    <sys:String x:Key="String.Msg.Common.JavaFilter">javaw.exe|javaw.exe|所有文件 (*.*)|*.*</sys:String>
+    <sys:String x:Key="String.Msg.Common.JavaFilter">Java 可执行文件 (javaw.exe;java.exe;javaw;java)|javaw.exe;java.exe;javaw;java|可执行文件 (*.exe)|*.exe|所有文件 (*.*)|*.*</sys:String>
     <sys:String x:Key="String.Msg.Common.ImportFailedTitle">导入失败</sys:String>
     <sys:String x:Key="String.Msg.Common.LoginFailedTitle">登录失败</sys:String>
 
@@ -468,7 +468,7 @@
     <sys:String x:Key="String.Msg.InstanceSettings.IsolationApplied">已按当前设置重建目录布局。</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.LastLaunch">上次启动：{0}</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.LaunchFailed">启动失败：{0}</sys:String>
-    <sys:String x:Key="String.Msg.InstanceSettings.MissingCount">缺少 {0} 个文件，已加入下载队列。</sys:String>
+    <sys:String x:Key="String.Msg.InstanceSettings.MissingCount">检查完成：缺少 {0} 个文件，可点击「补全游戏文件」修复。</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.ModSummary">共 {0} 个模组 · 启用 {1} 个 · 停用 {2} 个</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.MonitorOff">关闭（跟随全局：关）</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.MonitorOn">开启（跟随全局：开）</sys:String>
@@ -612,6 +612,7 @@
     <!-- ══ 下载源 ══ -->
     <sys:String x:Key="String.Mirror.Official">官方源 (Mojang / Fabric / Forge)</sys:String>
     <sys:String x:Key="String.Mirror.Bmclapi">BMCLAPI (bangbang93)</sys:String>
+    <sys:String x:Key="String.Settings.BmclapiCredit">使用 BMCLAPI 时，文件由 BMCLAPI（bangbang93.com）及其镜像节点提供，文件版权归原站点所有。</sys:String>
     <sys:String x:Key="String.Mirror.Mcbbs">MCBBS 镜像</sys:String>
     <sys:String x:Key="String.Mirror.FastMCMirror">光速镜像</sys:String>
     <sys:String x:Key="String.Settings.FastMCMirrorHint">光速镜像按官方域名逐一替换，自定义地址应填其 launcher-meta 域名（默认 https://launchermeta.fastmcmirror.org）。</sys:String>
@@ -685,6 +686,7 @@
     <sys:String x:Key="String.Core.Group.Assets">资源文件</sys:String>
     <sys:String x:Key="String.Core.Group.Libraries">依赖库</sys:String>
     <sys:String x:Key="String.Core.Group.Natives">本地库</sys:String>
+<sys:String x:Key="String.Core.Group.LoaderLibraries">加载器依赖库</sys:String>
     <sys:String x:Key="String.Core.Group.Modpack">整合包</sys:String>
     <sys:String x:Key="String.Core.Group.JavaRuntime">Java 运行时</sys:String>
 
@@ -703,8 +705,10 @@
 
     <!-- ══ Java 列表管理 ══ -->
     <sys:String x:Key="String.Java.ListTitle">Java 列表</sys:String>
-    <sys:String x:Key="String.Java.ListHint">点击「添加 Java」选择 java 可执行文件，会自动识别版本、名称与发布者，并同步同一 JDK 目录及隔壁的其他 Java。</sys:String>
+    <sys:String x:Key="String.Java.ListHint">点击「添加 Java」选择 java 可执行文件，或在下方直接填写完整路径后点「按路径添加」；会自动识别版本、名称与发布者，并同步同一 JDK 目录及隔壁的其他 Java。路径可以不带 .exe 后缀。</sys:String>
     <sys:String x:Key="String.Java.Add">添加 Java</sys:String>
+<sys:String x:Key="String.Java.AddByPath">按路径添加</sys:String>
+<sys:String x:Key="String.Java.AddByPathEmpty">请先填写 Java 可执行文件的完整路径。</sys:String>
     <sys:String x:Key="String.Java.ScanSystem">全量扫描</sys:String>
     <sys:String x:Key="String.Java.SyncPath">同步 PATH</sys:String>
     <sys:String x:Key="String.Java.Validate">验证</sys:String>
@@ -1104,6 +1108,15 @@
     <sys:String x:Key="String.Install.FolderHint">装到哪个实例文件夹；留「默认」则放进启动器的 .minecraft。</sys:String>
     <sys:String x:Key="String.Install.Start">开始安装</sys:String>
     <sys:String x:Key="String.Install.Done">安装完成</sys:String>
+<sys:String x:Key="String.Install.Step.Prepare">准备版本信息</sys:String>
+<sys:String x:Key="String.Install.Step.Vanilla">下载原版内容</sys:String>
+<sys:String x:Key="String.Install.Step.Loader">安装加载器</sys:String>
+<sys:String x:Key="String.Install.Step.LoaderLibs">下载加载器依赖库</sys:String>
+<sys:String x:Key="String.Install.Step.Instance">创建游戏实例</sys:String>
+<sys:String x:Key="String.Install.Step.Finish">安装完成</sys:String>
+<sys:String x:Key="String.Install.Step.FileCount">共 {0} 个文件</sys:String>
+<sys:String x:Key="String.Install.Step.LibsSkipped">加载器依赖库已齐全</sys:String>
+<sys:String x:Key="String.Install.Step.LoaderFailed">加载器安装未完成，无法继续</sys:String>
     <sys:String x:Key="String.Install.LoadingLoader">正在获取加载器版本…</sys:String>
     <sys:String x:Key="String.Install.NoLoaderVersion">该版本没有可用的加载器版本。</sys:String>
     <sys:String x:Key="String.Install.VanillaHint">原版：直接安装游戏本体。</sys:String>
@@ -1190,7 +1203,9 @@
     <sys:String x:Key="String.Settings.BackgroundCopyFailed">复制背景图失败：</sys:String>
     <sys:String x:Key="String.Core.Task.Creating">正在创建任务…</sys:String>
     <sys:String x:Key="String.Task.Creating">正在创建任务…</sys:String>
-    <sys:String x:Key="String.Core.Err.Http.TooManyRequests">镜像源限流了（429），并发开太高。到「设置 → 下载」把并发调低（比如 8~12），或换个镜像源。</sys:String>
+    <sys:String x:Key="String.Core.Err.Http.TooManyRequests">该下载源当前限流（429），已自动切换到其他源；若反复出现，可稍后重试或在设置中更换下载源。</sys:String>
+    <sys:String x:Key="String.Core.Err.Http.Stalled">连接已建立，但 {0} 秒内没有收到任何数据（源停滞），将换源重试。</sys:String>
+    <sys:String x:Key="String.Core.Log.Download.StallSwitch">源长时间未返回数据，换源重试：{0} → {1}</sys:String>
     <sys:String x:Key="String.Core.Err.Http.Forbidden">镜像源拒绝了这个文件（403），换一个镜像源试试。</sys:String>
     <sys:String x:Key="String.Settings.LauncherTitle">启动器标题</sys:String>
     <sys:String x:Key="String.Settings.LauncherTitleHint">改的是启动器窗口自己的标题，和游戏窗口无关。留空恢复成 LPML；也可以填 LPML Launcher。</sys:String>
@@ -1286,6 +1301,8 @@
     <sys:String x:Key="String.Launch.RepairedVersionFiles">已联网补装 {0} 的游戏文件（实例：{1}）</sys:String>
     <sys:String x:Key="String.Launch.RepairNoManifestEntry">版本清单里找不到 {0}，无法自动补装</sys:String>
     <sys:String x:Key="String.Launch.RepairJsonFailed">补装失败：获取 {0} 版本 JSON 失败</sys:String>
+    <sys:String x:Key="String.Launch.RepairCannot">版本 {0} 的 JSON 文件已丢失且暂时无法自动恢复；请在下载中心重新安装该版本，或检查网络后重试。</sys:String>
+    <sys:String x:Key="String.Launch.RepairJsonRestored">已自动补回版本 {0} 的 JSON 文件</sys:String>
     <sys:String x:Key="String.Launch.RepairFailed">自动补装 {0} 失败</sys:String>
     <sys:String x:Key="String.Task.StepCancelled">已取消</sys:String>
     <sys:String x:Key="String.Task.StepPreparing">正在准备 {0} 的文件清单</sys:String>
@@ -1305,6 +1322,8 @@
     <sys:String x:Key="String.Task.GroupPackHint">整合包自带的模组与覆盖文件</sys:String>
     <sys:String x:Key="String.Task.GroupVanilla">原版内容</sys:String>
     <sys:String x:Key="String.Task.GroupVanillaHint">版本 JSON、客户端 jar、依赖库与资源文件</sys:String>
+<sys:String x:Key="String.Task.GroupLoader">加载器内容</sys:String>
+<sys:String x:Key="String.Task.GroupLoaderHint">加载器自带的依赖库（不在原版清单里）</sys:String>
     <sys:String x:Key="String.Task.GroupGeneral">其他文件</sys:String>
     <sys:String x:Key="String.Task.GroupGeneralHint">这次任务里的其它下载</sys:String>
     <sys:String x:Key="String.Task.GroupCount">{0}/{1} 个文件</sys:String>
@@ -1551,4 +1570,51 @@
     <sys:String x:Key="String.Multi.RestartCoreOk">联机核心已重新启动，请重试刚才的操作。</sys:String>
     <sys:String x:Key="String.Multi.RestartCoreHint">仅重启本启动器拉起的核心；若正在复用其他启动器已运行的核心，只会重新探测，不会结束它。</sys:String>
     <sys:String x:Key="String.Multi.Err.RestartFailed">重新启动联机核心失败：{0}</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryBatch">失败文件自动整批重下</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryBatchHint">一轮下载结束后，把仍然失败的文件整体重新排队，不必逐个点重试。上面的「失败重试次数」是单个文件的即时重试，这里是整批再来一轮。</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryRounds">最多自动重下轮数</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryDelay">每轮等待秒数</sys:String>
+    <sys:String x:Key="String.Core.Status.AutoRetryWait">等待整批重下 {0}/{1}：{2} 秒后重下 {3} 个文件</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Start">自动整批重下第 {0}/{1} 轮：{2} 个文件失败，等待 {3} 秒</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Done">自动整批重下第 {0} 轮结束，仍有 {1} 个文件失败</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Exhausted">已达到最多 {0} 轮自动重下，仍有 {1} 个文件失败，需手动重试</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Cancelled">自动整批重下已中止（暂停或取消）</sys:String>
+
+    <!-- 版本通道：官方清单把愚人节构建也标成 snapshot，这里单独分类 -->
+    <sys:String x:Key="String.Download.AprilFools">愚人节版本</sys:String>
+    <sys:String x:Key="String.Download.Legacy">历史版本</sys:String>
+    <sys:String x:Key="String.Download.Type.Release">正式版</sys:String>
+    <sys:String x:Key="String.Download.Type.Snapshot">快照</sys:String>
+    <sys:String x:Key="String.Download.Type.AprilFools">愚人节</sys:String>
+    <sys:String x:Key="String.Download.Type.Legacy">历史版本</sys:String>
+    <sys:String x:Key="String.Download.FilteredVersionCount">共 {0} 个版本，当前显示 {1} 个</sys:String>
+    <sys:String x:Key="String.Download.UnstableHint">快照与愚人节版本为官方测试或玩笑构建，可能无法正常启动，加载器也可能没有适配版本；建议装进独立实例与文件夹。</sys:String>
+    <sys:String x:Key="String.Install.UnstableHint">该版本为官方测试或玩笑构建，官方不保证可启动；加载器列表为空属于正常情况。</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.FetchFailed">获取失败：{0}</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.VersionIdMismatch">版本 {0} 返回的 JSON 中 id 为 {1}，已跳过</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.VersionShaMismatch">版本 {0} 的 JSON 校验值与清单不一致，已按可解析内容继续</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.MirrorIncomplete">当前源的版本清单未包含愚人节构建，已并入官方清单</sys:String>
+    <sys:String x:Key="String.Core.Log.Install.AssetIndexMissing">版本 {0} 未提供 assetIndex，已跳过资源索引下载</sys:String>
+    <sys:String x:Key="String.Msg.Download.LoaderLibraries">正在补齐加载器依赖库…</sys:String>
+    <sys:String x:Key="String.Core.Err.Download.InvalidJar">依赖文件损坏（不是有效的 JAR），正在重新下载：{0}</sys:String>
+    <sys:String x:Key="String.Folder.LayoutSection">存储方式</sys:String>
+<sys:String x:Key="String.Folder.LayoutSplitName">分离存储（版本文件与实例数据分开）</sys:String>
+    <sys:String x:Key="String.Folder.LayoutMergedName">合并存储（PCL / HMCL 式）</sys:String>
+    <sys:String x:Key="String.Folder.LayoutCurrent">当前存储方式：{0}</sys:String>
+    <sys:String x:Key="String.Folder.LayoutToMerged">切换为合并存储</sys:String>
+    <sys:String x:Key="String.Folder.LayoutToSplit">切换为分离存储</sys:String>
+    <sys:String x:Key="String.Folder.LayoutDone">已转换 {0} 个实例</sys:String>
+    <sys:String x:Key="String.Folder.LayoutHint">按文件夹生效；两种布局都能启动，记录写在该文件夹的 lpml-folder.json 里。</sys:String>
+    <sys:String x:Key="String.Toast.Working">正在处理…</sys:String>
+    <sys:String x:Key="String.Toast.Done">操作完成</sys:String>
+    <sys:String x:Key="String.Toast.Failed">操作未成功</sys:String>
+
+    <!-- 调试日志会话与启动主类诊断 -->
+    <sys:String x:Key="String.GameLog.SessionTitle">游戏日志 — {0} · {1}</sys:String>
+    <sys:String x:Key="String.GameLog.SessionEnded">游戏进程已结束（退出代码 {0}），本次日志已完整保留</sys:String>
+    <sys:String x:Key="String.Launch.OpenFullLog">打开完整日志窗口</sys:String>
+    <sys:String x:Key="String.Core.Log.Install.MainClassRepair">启动主类 {0} 不在任何 jar 中，已将 {1} 个加载器库标记为强制重下</sys:String>
+    <sys:String x:Key="String.Core.Log.Install.JarInspectFailed">读取 {0} 失败：{1}</sys:String>
+    <sys:String x:Key="String.Core.Log.Launch.MainClassMissing">启动主类 {0} 不在 classpath 中（共 {1} 个 jar，示例：{2}），已中止启动</sys:String>
+    <sys:String x:Key="String.Core.Err.Launch.MainClassMissing">加载器文件不完整：找不到启动主类 {0}。请在实例里点「补全游戏文件」，或到下载中心重装该加载器版本</sys:String>
 </ResourceDictionary>

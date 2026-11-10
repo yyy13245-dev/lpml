@@ -5,6 +5,7 @@ using LPML.Core.Java;
 using LPML.Core.Download;
 using LPML.Core.Mirror;
 using LPML.Core.Utils;
+using System.IO.Compression;
 
 namespace LPML.Core.Launch;
 
@@ -37,9 +38,18 @@ public sealed class LaunchService
     /// <summary>列出缺失文件（启动前检查 / 修复用）。</summary>
     public List<string> FindMissingFiles(string versionId)
     {
-        var version = _resolver.Load(versionId);
         var missing = new List<string>();
-        if (version is null) return missing;
+        var version = _resolver.Load(versionId);
+        // 版本 JSON 缺了或读不出来时 _resolver.Load 返回 null。
+        // 以前直接返回空清单，上层一律当成「文件已完整」——这正是手动删掉
+        // versions\<id> 之后，检查完整性 / 补全文件却提示齐全的根因。
+        if (version is null)
+        {
+            missing.Add(_paths.VersionJsonPath(versionId));   // 缺失或不可解析都算缺失
+            if (!File.Exists(_paths.VersionJarPath(versionId)))
+                missing.Add(_paths.VersionJarPath(versionId));
+            return missing;
+        }
         _builder.BuildClasspath(version, versionId, out missing);
         if (!File.Exists(_paths.VersionJarPath(versionId))) missing.Add(_paths.VersionJarPath(versionId));
         return missing.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -143,9 +153,24 @@ public sealed class LaunchService
 
         try
         {
-            var classpath = string.Join(Path.PathSeparator, _builder.BuildClasspath(version, versionId, out var missing));
+            var classpathEntries = _builder.BuildClasspath(version, versionId, out var missing);
             if (missing.Count > 0)
                 Log.Warn("Launch", L.F("String.Core.Log.Launch.MissingFiles", missing.Count));
+
+            // 最后一道闸：classpath 里所有 jar 都合法，但启动主类一个都不在里面时，
+            // JVM 会直接 ClassNotFoundException 秒退。以前这情况被当成「启动成功」，
+            // 用户只看到退出代码 1。这里先查清楚，给出可操作的错误而不是硬启动。
+            var mainClass = version.MainClass ?? "net.minecraft.client.main.Main";
+            if (!MainClassInClasspath(classpathEntries, mainClass))
+            {
+                var sample = string.Join(" | ", classpathEntries.Take(3).Select(p => Path.GetFileName(p) ?? p));
+                Log.Warn("Launch", L.F("String.Core.Log.Launch.MainClassMissing",
+                    mainClass, classpathEntries.Count, sample));
+                return LaunchAttempt.Fail(
+                    L.F("String.Core.Err.Launch.MainClassMissing", mainClass), retryable: false);
+            }
+
+            var classpath = string.Join(Path.PathSeparator, classpathEntries);
 
             _builder.ExtractNatives(version, versionId);
             var natives = options.UseIsolatedNativesDirectory
@@ -185,6 +210,26 @@ public sealed class LaunchService
             Log.Error("Launch", L.T("String.Core.Log.Launch.Failed"), ex);
             return LaunchAttempt.Fail(ex.Message, required, path, java);
         }
+    }
+
+    /// <summary>classpath 中是否真的存在启动主类对应的 .class 文件。</summary>
+    private static bool MainClassInClasspath(IReadOnlyList<string> jars, string mainClass)
+    {
+        var entry = mainClass.Replace('.', '/') + ".class";
+        foreach (var jar in jars)
+        {
+            if (!FileHelper.IsUsableLibraryFile(jar)) continue;
+            try
+            {
+                using var zip = ZipFile.OpenRead(jar);
+                if (zip.GetEntry(entry) is not null) return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                // 单个 jar 读不了就继续看下一个，不让一个坏包挡住诊断
+            }
+        }
+        return false;
     }
 
     private JavaInfo? ResolveJavaInfo(string? preferred, int requiredMajor, ISet<string> tried)

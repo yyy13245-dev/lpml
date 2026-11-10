@@ -3,12 +3,14 @@ using LPML.App.Windows;
 using LPML.Core;
 using LPML.Core.Auth;
 using LPML.Core.Download;
+using LPML.Core.Game.Models;
 using LPML.Core.Instances;
 using LPML.Core.Launch;
 using LPML.Core.Utils;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using System.Threading.Tasks;
 
 namespace LPML.App.Services;
@@ -20,8 +22,8 @@ namespace LPML.App.Services;
 public sealed class GameLaunchService
 {
     private readonly LauncherContext _ctx;
-    private GameLogWindow? _logWindow;
-    private GameLogMonitor? _monitor;
+    // 每次调试启动各开一个窗口，互不覆盖；进程结束后窗口保留，日志不清空
+    private GameLogWindow? _debugWindow;
     private StreamWriter? _gameLogWriter;
 
     // 异常退出排查用的尾部缓冲：只在内存里留最近 20 行，不依赖日志窗口或隐私开关
@@ -50,23 +52,98 @@ public sealed class GameLaunchService
         lock (_tailSync) return _tail.TakeLast(count).ToList();
     }
 
-    /// <summary>当前日志窗口（若为 null 表示未开启）。</summary>
-    public GameLogWindow? LogWindow => _logWindow;
+    /// <summary>当前调试日志窗口（若为 null 表示未开启）。</summary>
+    public GameLogWindow? LogWindow => _debugWindow;
+
+    /// <summary>
+    /// 打开一个独立的游戏日志窗口：本次会话专用，从游戏开始一直记到结束，不复用、不清空。
+    /// 先把会话开始前已经产生的游戏输出灌进去，再实时追加；窗口短暂置顶，避免被主窗口盖住。
+    /// </summary>
+    public GameLogWindow? OpenDebugWindow(GameInstance instance)
+    {
+        if (Headless) return null;
+        GameLogWindow? window = null;
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            window = new GameLogWindow();
+            var owner = Application.Current.MainWindow;
+            if (owner is not null && !ReferenceEquals(owner, window))
+            {
+                window.Owner = owner;
+                window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            }
+            window.SetSession(instance.Name, DateTime.Now);
+            window.AppendHistory(GameOutputHub.Recent());
+            window.Show();
+            window.Activate();
+            window.Topmost = true;
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+            var target = window!;
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (target.IsLoaded) target.Topmost = false;
+            };
+            timer.Start();
+            _debugWindow = window;
+        });
+        return window;
+    }
 
     /// <summary>状态变化（供界面显示）。</summary>
     public event EventHandler<string>? StatusChanged;
 
+    /// <summary>
+    /// 补全结果。Count == 0 有两种完全不同的含义：文件确实齐全，
+    /// 或者连版本 JSON 都读不出来、根本算不出清单。以前两者都显示「文件已完整」。
+    /// </summary>
+    public readonly struct RepairOutcome
+    {
+        public RepairOutcome(int count, bool success, string? message = null)
+        {
+            Count = count;
+            Success = success;
+            Message = message;
+        }
+
+        public int Count { get; }
+        public bool Success { get; }
+        public string? Message { get; }
+    }
+
+    private readonly struct RepairPlan
+    {
+        private RepairPlan(bool success, List<DownloadItem> items, string? message)
+        {
+            Success = success;
+            Items = items;
+            Message = message;
+        }
+
+        public bool Success { get; }
+        public List<DownloadItem> Items { get; }
+        public string? Message { get; }
+
+        public static RepairPlan Ok(List<DownloadItem> items) => new RepairPlan(true, items, null);
+        public static RepairPlan Fail(string message) => new RepairPlan(false, new List<DownloadItem>(), message);
+    }
+
     // ── 文件完整性 ──────────────────────────────────────────
 
-    /// <summary>列出缺失文件（不下载）。</summary>
+    /// <summary>列出缺失文件（不下载）。按实例自己的工作目录判断，否则隔离文件夹里的实例
+    /// 会拿默认 .minecraft 的文件来判定，结果永远是「齐全」。</summary>
     public List<string> FindMissing(GameInstance instance)
-        => _ctx.Launcher.FindMissingFiles(instance.VersionId);
+    {
+        var previous = _ctx.Paths.BeginGameDirectory(_ctx.WorkingDirectoryFor(instance));
+        try { return _ctx.Launcher.FindMissingFiles(instance.VersionId); }
+        finally { _ctx.Paths.EndGameDirectory(previous); }
+    }
 
     /// <summary>
     /// 补全游戏文件：把该版本需要的全部联网文件（jar / 依赖库 / 资源索引与资源）
     /// 一次性下载完整，避免首次进游戏还要再下。已存在且校验通过的文件自动跳过。
     /// </summary>
-    public async Task<int> CompleteFilesAsync(GameInstance instance,
+    public async Task<RepairOutcome> CompleteFilesAsync(GameInstance instance,
         IProgress<DownloadAggregate>? progress = null, CancellationToken token = default,
         string? targetDirectory = null, LPML.Core.Download.DownloadTask? task = null)
     {
@@ -82,7 +159,7 @@ public sealed class GameLaunchService
         }
     }
 
-    private async Task<int> CompleteFilesCoreAsync(GameInstance instance,
+    private async Task<RepairOutcome> CompleteFilesCoreAsync(GameInstance instance,
         IProgress<DownloadAggregate>? progress, CancellationToken token,
         LPML.Core.Download.DownloadTask? task = null)
     {
@@ -102,7 +179,21 @@ public sealed class GameLaunchService
 
         try
         {
-            var items = await BuildRepairItemsForTargetAsync(instance, token).ConfigureAwait(false);
+            var plan = await BuildRepairPlanAsync(instance, token).ConfigureAwait(false);
+            if (!plan.Success)
+            {
+                // 版本 JSON 丢了又恢复不了，绝不能回一句「文件已完整」。
+                // 任务卡里也留一条失败步骤，免得又是一张空卡。
+                if (ownTask)
+                {
+                    var step = _ctx.Downloads.AddStep(plan.Message!, repairTask);
+                    step.Status = TaskStepStatus.Failed;
+                }
+                Log.Warn("Launch", plan.Message!);
+                return new RepairOutcome(0, false, plan.Message);
+            }
+
+            var items = plan.Items;
             if (items.Count == 0)
             {
                 // 确实没缺文件也给一张有内容的卡，别留空列表
@@ -111,14 +202,14 @@ public sealed class GameLaunchService
                     var step = _ctx.Downloads.AddStep(L.T("String.Task.RepairNothingToDo"), repairTask);
                     step.Status = TaskStepStatus.Done;
                 }
-                return 0;
+                return new RepairOutcome(0, true);
             }
 
             // 不清空全局队列：启动补全可能和别的安装同时进行。
             // 显式归到自己的任务，避免并发时串到别的任务卡里。
             _ctx.Downloads.Enqueue(items, repairTask);
             await _ctx.Downloads.RunAsync(token).ConfigureAwait(false);
-            return items.Count;
+            return new RepairOutcome(items.Count, true);
         }
         finally
         {
@@ -128,35 +219,163 @@ public sealed class GameLaunchService
     }
 
     /// <summary>
-    /// 列补全清单。目标目录里没有版本 JSON 时（实例指向了新建的文件夹，
-    /// 版本列表却是从共享 .minecraft 读来的），不能就此返回空清单——
-    /// 那会被上层误判成「文件已完整」。先把版本 JSON 拉下来写进目标目录，再重新列。
+    /// 列补全清单。目标目录里没有（或读不出）版本 JSON 时不能返回空清单——
+    /// 那会被上层误判成「文件已完整」。先尝试恢复 JSON，再重新列一次。
     /// </summary>
-    private async Task<List<DownloadItem>> BuildRepairItemsForTargetAsync(
-        GameInstance instance, CancellationToken token)
+    private async Task<RepairPlan> BuildRepairPlanAsync(GameInstance instance, CancellationToken token)
     {
-        var items = await _ctx.Launcher.BuildRepairItemsAsync(instance.VersionId, token).ConfigureAwait(false);
-        if (items.Count > 0 || string.IsNullOrWhiteSpace(instance.VersionId)) return items;
+        var versionId = instance.VersionId ?? "";
+        if (string.IsNullOrWhiteSpace(versionId)) return RepairPlan.Ok(new List<DownloadItem>());
 
-        // 目标目录确实有版本 JSON，才算文件齐全
-        if (File.Exists(_ctx.Paths.VersionJsonPath(instance.VersionId))) return items;
+        // 加载器 profile 的父版本 JSON 也可能一起被删：不补齐继承链的话，
+        // VersionResolver 只合并到子版本，原版依赖库会从清单里整段消失。
+        await EnsureParentVersionsAsync(versionId, token).ConfigureAwait(false);
 
+        var items = await _ctx.Launcher.BuildRepairItemsAsync(versionId, token).ConfigureAwait(false);
+        if (items.Count > 0) return RepairPlan.Ok(items);
+
+        var jsonPath = _ctx.Paths.VersionJsonPath(versionId);
+        if (File.Exists(jsonPath) && _ctx.Resolver.Load(versionId) is not null)
+            return RepairPlan.Ok(items);   // JSON 可读且清单为空 → 确实齐全
+
+        var restored = await TryRestoreVersionJsonAsync(versionId, token).ConfigureAwait(false);
+        if (!restored) return RepairPlan.Fail(Lang.F("String.Launch.RepairCannot", versionId));
+
+        await EnsureParentVersionsAsync(versionId, token).ConfigureAwait(false);
+        // 重新走一遍过滤后的清单，别像以前那样把整份原始清单塞进任务卡，
+        // 结果几十个「已拥有」文件看起来像在下载、其实一个字节都没下。
+        var rebuilt = await _ctx.Launcher.BuildRepairItemsAsync(versionId, token).ConfigureAwait(false);
+        return RepairPlan.Ok(rebuilt);
+    }
+
+    /// <summary>
+    /// 版本 JSON 缺了 / 读不出来时的三级恢复：
+    /// ① 从其它已知游戏目录复用同名 JSON 与 jar；
+    /// ② 官方清单精确匹配，重新下载版本 JSON；
+    /// ③ 本启动器生成的 Fabric / Quilt 加载器版本，按 ID 反推重建 profile。
+    /// </summary>
+    private async Task<bool> TryRestoreVersionJsonAsync(string versionId, CancellationToken token = default)
+    {
+        // ① 复用：别的文件夹里还留着同一个版本时，直接拷回来，不必联网
+        var elsewhere = FindVersionJsonElsewhere(versionId);
+        if (elsewhere is not null)
+        {
+            try
+            {
+                var sourceDir = Path.GetDirectoryName(elsewhere);
+                var targetJson = _ctx.Paths.VersionJsonPath(versionId);
+                var targetDir = Path.GetDirectoryName(targetJson);
+                if (sourceDir is not null && targetDir is not null &&
+                    !string.Equals(sourceDir, targetDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    FileHelper.EnsureDirectory(targetDir);
+                    File.Copy(elsewhere, targetJson, true);
+                    var sourceJar = Path.Combine(sourceDir, versionId + ".jar");
+                    var targetJar = _ctx.Paths.VersionJarPath(versionId);
+                    if (File.Exists(sourceJar) && !File.Exists(targetJar))
+                        File.Copy(sourceJar, targetJar, true);
+                    if (_ctx.Resolver.Load(versionId) is not null)
+                    {
+                        Log.Info("Launch", Lang.F("String.Launch.ReusedVersionFile", versionId + ".json", sourceDir));
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Launch", Lang.F("String.Launch.RepairJsonFailed", versionId) + " " + ex.Message);
+            }
+        }
+
+        // ② 官方清单精确匹配
         var manifest = await _ctx.ManifestService.GetManifestAsync(token: token).ConfigureAwait(false);
         var entry = manifest?.Versions.FirstOrDefault(v =>
-            string.Equals(v.Id, instance.VersionId, StringComparison.OrdinalIgnoreCase));
-        if (entry is null)
+            string.Equals(v.Id, versionId, StringComparison.OrdinalIgnoreCase));
+        if (entry is not null)
         {
-            Log.Warn("Launch", Lang.F("String.Launch.RepairNoManifestEntry", instance.VersionId));
-            return items;
+            try
+            {
+                var json = await _ctx.ManifestService.FetchVersionJsonAsync(entry, token).ConfigureAwait(false);
+                if (json is not null && _ctx.Resolver.Load(versionId) is not null)
+                {
+                    Log.Info("Launch", Lang.F("String.Launch.RepairJsonRestored", versionId));
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Launch", Lang.F("String.Launch.RepairJsonFailed", versionId) + " " + ex.Message);
+            }
         }
 
-        var json = await _ctx.ManifestService.FetchVersionJsonAsync(entry, token).ConfigureAwait(false);
-        if (json is null)
+        // ③ 加载器版本：官方清单里没有 fabric-loader-xxx 这种 ID，
+        //    但 profile 是本启动器按固定格式生成的，可以重新拉一份。
+        if (manifest is not null)
         {
-            Log.Warn("Launch", Lang.F("String.Launch.RepairJsonFailed", instance.VersionId));
-            return items;
+            var mc = manifest.Versions
+                .Where(v => !string.IsNullOrWhiteSpace(v.Id) &&
+                            versionId.EndsWith("-" + v.Id, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(v => v.Id.Length)
+                .FirstOrDefault();
+            if (mc is not null)
+            {
+                foreach (var prefix in new[] { "fabric-loader-", "quilt-loader-" })
+                {
+                    if (!versionId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                    var take = versionId.Length - prefix.Length - mc.Id.Length - 1;
+                    if (take <= 0) break;
+                    var loaderVersion = versionId.Substring(prefix.Length, take);
+                    try
+                    {
+                        var rebuilt = prefix.StartsWith("fabric", StringComparison.OrdinalIgnoreCase)
+                            ? await _ctx.Loaders.InstallFabricAsync(mc.Id, loaderVersion, token).ConfigureAwait(false)
+                            : await _ctx.Loaders.InstallQuiltAsync(mc.Id, loaderVersion, token).ConfigureAwait(false);
+                        if (string.Equals(rebuilt, versionId, StringComparison.OrdinalIgnoreCase) &&
+                            _ctx.Resolver.Load(versionId) is not null)
+                        {
+                            Log.Info("Launch", Lang.F("String.Launch.RepairJsonRestored", versionId));
+                            return true;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("Launch", Lang.F("String.Launch.RepairJsonFailed", versionId) + " " + ex.Message);
+                    }
+                    break;
+                }
+            }
         }
-        return await _ctx.Installer.BuildInstallItemsAsync(json, true, token).ConfigureAwait(false);
+
+        return _ctx.Resolver.Load(versionId) is not null;
+    }
+
+    /// <summary>
+    /// 补齐 inheritsFrom 链上缺失的父版本 JSON。纯本地检查，只有真的缺了才联网。
+    /// </summary>
+    private async Task EnsureParentVersionsAsync(string versionId, CancellationToken token = default)
+    {
+        VersionManifest? manifest = null;
+        var current = versionId;
+        for (var i = 0; i < 8; i++)
+        {
+            var path = _ctx.Paths.VersionJsonPath(current);
+            if (!File.Exists(path)) break;
+            VersionJson? raw = null;
+            try { raw = Json.Load<VersionJson>(path); }
+            catch (Exception) { break; }
+            if (raw is null || string.IsNullOrWhiteSpace(raw.InheritsFrom)) break;
+
+            current = raw.InheritsFrom!;
+            if (File.Exists(_ctx.Paths.VersionJsonPath(current))) continue;
+
+            manifest ??= await _ctx.ManifestService.GetManifestAsync(token: token).ConfigureAwait(false);
+            var entry = manifest?.Versions.FirstOrDefault(v =>
+                string.Equals(v.Id, current, StringComparison.OrdinalIgnoreCase));
+            if (entry is null) break;
+            var fetched = await _ctx.ManifestService.FetchVersionJsonAsync(entry, token).ConfigureAwait(false);
+            if (fetched is null) break;
+            Log.Info("Launch", Lang.F("String.Launch.RepairJsonRestored", current));
+        }
     }
 
     // ── 启动 ────────────────────────────────────────────────
@@ -247,7 +466,8 @@ public sealed class GameLaunchService
     }
 
     /// <summary>
-    /// 联网补装缺失的版本文件：从版本清单找到对应条目，重下版本 JSON 与本体。
+    /// 联网补装缺失的版本文件：先恢复版本 JSON（含加载器 profile 与父版本），
+    /// 再按「已存在 + 校验通过」过滤出真正要下的文件。
     /// 用于整合包只装了模组、本体从未装过，或 .minecraft 被清掉的情况。
     /// 返回 true 表示补装成功。
     /// </summary>
@@ -260,27 +480,18 @@ public sealed class GameLaunchService
         _ctx.Downloads.MarkTaskReady();
         try
         {
-            var manifest = await _ctx.ManifestService.GetManifestAsync().ConfigureAwait(false);
-            var entry = manifest?.Versions.FirstOrDefault(
-                v => string.Equals(v.Id, versionId, StringComparison.OrdinalIgnoreCase));
-
-            if (entry is null)
-            {
-                Log.Warn("Launch", Lang.F("String.Launch.RepairNoManifestEntry", versionId));
-                return false;
-            }
-
             var previous = _ctx.Paths.BeginGameDirectory(_ctx.SharedGameDirectoryFor(instance));
             try
             {
-                var json = await _ctx.ManifestService.FetchVersionJsonAsync(entry).ConfigureAwait(false);
-                if (json is null)
+                var restored = await TryRestoreVersionJsonAsync(versionId).ConfigureAwait(false);
+                if (!restored)
                 {
-                    Log.Warn("Launch", Lang.F("String.Launch.RepairJsonFailed", versionId));
+                    Log.Warn("Launch", Lang.F("String.Launch.RepairCannot", versionId));
                     return false;
                 }
 
-                var items = await _ctx.Installer.BuildInstallItemsAsync(json, true).ConfigureAwait(false);
+                await EnsureParentVersionsAsync(versionId).ConfigureAwait(false);
+                var items = await _ctx.Launcher.BuildRepairItemsAsync(versionId).ConfigureAwait(false);
                 if (items.Count > 0)
                     await _ctx.Downloads.RunItemsAsync(items, repairTask).ConfigureAwait(false);
 
@@ -443,14 +654,20 @@ public sealed class GameLaunchService
             };
         }
 
-        // ── 启动进度窗：依赖 → 登录 → 准备 → 启动 → 到主界面才关 ──
+        // ── 启动进度窗 ──
+        // 调试模式是用户显式点了「调试」，只开日志窗口，不再额外弹一个进度框。
         LaunchProgressWindow? progressWindow = null;
-        if (!Headless)
+        if (!Headless && !debugMode)
         {
             progressWindow = CreateProgressWindow(instance);
             progressWindow.SetStage(1);
             progressWindow.SetDetail(1, L.T("String.Launch.Checking"));
         }
+        // 有些入口（联机页选实例启动）也走 debugMode=true，但自己没先开窗口，
+        // 这里兜底补上，保证「调试启动 = 一定有独立日志窗口」。
+        if (debugMode && !Headless && _debugWindow is null) OpenDebugWindow(instance);
+        // 绑定本次会话的窗口：多开时后启动的实例不会把前一个窗口的输出抢走。
+        var sessionWindow = _debugWindow;
 
         var options = BuildOptions(instance, account);
 
@@ -464,23 +681,35 @@ public sealed class GameLaunchService
             var repairTask = _ctx.Downloads.BeginTask(L.T("String.Task.KindGame"), "game");
             _ctx.Downloads.MarkTaskReady();
             var progress = new Progress<DownloadAggregate>(agg => progressWindow?.SetDownloadProgress(agg));
-            await CompleteFilesAsync(instance, progress, token, null, repairTask).ConfigureAwait(false);
+            var repair = await CompleteFilesAsync(instance, progress, token, null, repairTask).ConfigureAwait(false);
             _ctx.Downloads.MarkFinished(repairTask);
+            if (!repair.Success)
+            {
+                progressWindow?.RequestClose();
+                return new LaunchResult
+                {
+                    Success = false,
+                    ErrorMessage = repair.Message ?? L.T("String.Msg.Common.Failed")
+                };
+            }
         }
         // 补全之后再查一次：下载失败了（403/429 之类）就别硬启动，
         // 否则游戏会因为缺库崩溃，用户只会看到"启动成功但没窗口"。
-        var stillMissing = missing.Count == 0
-            ? 0
-            : (await _ctx.Launcher.BuildRepairItemsAsync(instance.VersionId, token).ConfigureAwait(false)).Count;
-        if (stillMissing > 0)
+        var recheck = missing.Count == 0
+            ? new List<LPML.Core.Download.DownloadItem>()
+            : await _ctx.Launcher.BuildRepairItemsAsync(instance.VersionId, token).ConfigureAwait(false);
+        if (recheck.Count > 0)
         {
-            progressWindow?.SetDetail(1, L.F("String.Launch.FilesStillMissing", stillMissing));
-            Log.Warn("Launch", Lang.F("String.Launch.FilesStillMissingLog", instance.Name, stillMissing));
+            // 只报数字等于没报：把前几个坏文件写进日志，下次一眼能看出是 jar 坏了还是没下到。
+            var sample = string.Join(" | ", recheck.Take(5)
+                .Select(i => Path.GetFileName(string.IsNullOrWhiteSpace(i.Destination) ? i.Name : i.Destination)));
+            progressWindow?.SetDetail(1, L.F("String.Launch.FilesStillMissing", recheck.Count));
+            Log.Warn("Launch", Lang.F("String.Launch.FilesStillMissingLog", instance.Name, recheck.Count) + " | " + sample);
             progressWindow?.RequestClose();
             return new LaunchResult
             {
                 Success = false,
-                ErrorMessage = Lang.F("String.Launch.FilesStillMissing", stillMissing)
+                ErrorMessage = Lang.F("String.Launch.FilesStillMissing", recheck.Count)
             };
         }
 
@@ -564,33 +793,46 @@ public sealed class GameLaunchService
 
         // 无论是否开日志窗口/隐私开关，都在内存里留一份输出尾部，供异常退出时回看。
         // 游戏输出带实例名，多个实例一起跑时日志不会混在一起。
+        // 调试窗口也直接挂在这里：不受隐私开关影响，且窗口是在启动过程中才被打开时
+        // （例如从进度框点「打开完整日志窗口」），后续每一行照样能补进去。
         process.OutputReceived += (_, line) =>
         {
             AppendTail(line);
             Log.Info("Game", $"[{instance.Name}] {line}");
+            if (Headless) return;
+            // 本次会话有专属窗口就写它；没有（例如启动后才从进度框打开）
+            // 则回落到当前窗口，窗口打开前的输出已在 OpenDebugWindow 里补齐。
+            var target = sessionWindow ?? _debugWindow;
+            if (target is not null)
+                Application.Current.Dispatcher.BeginInvoke(() => target.AppendRaw(line));
         };
 
-        // 日志监听：实例级开关优先，其次全局隐私开关
-        var monitoring = instance.MonitorLogEffective(privacy.EnableLogMonitoring);
-        var showWindow = monitoring && debugMode && privacy.LaunchWithLogWindow;
+        // 日志监听：调试模式由用户显式触发，强制开启，不受隐私开关降级
+        var monitoring = debugMode || instance.MonitorLogEffective(privacy.EnableLogMonitoring);
 
         // 阶段 4：已运行 Java，等 MC 输出"到主界面"
         progressWindow?.SetStage(4);
         progressWindow?.SetDetail(4, L.T("String.Launch.Running"));
 
+        // 每次启动用自己的监控器：以前共用一个字段，多开时后一个会把前一个覆盖，
+        // 输出泵读到的是新监控器，两个实例的日志就串在一起，端口/崩溃也会重复触发。
+        var monitor = new GameLogMonitor
+        {
+            DetectPort = privacy.NotifyServerPort && monitoring,
+            DetectCrash = privacy.NotifyOnCrash && monitoring
+        };
         if (progressWindow is not null)
         {
             var window = progressWindow;
-            _monitor = new GameLogMonitor { DetectPort = privacy.NotifyServerPort, DetectCrash = privacy.NotifyOnCrash };
-            _monitor.LineReceived += (_, line) => window.AppendLog(line.Raw);
-            _monitor.ReadyDetected += (_, _) => window.RequestClose();
-            StartPump(process);
+            monitor.LineReceived += (_, line) => window.AppendLog(line.Raw);
+            monitor.ReadyDetected += (_, _) => window.RequestClose();
         }
+        StartPump(process, monitor);
 
-        if (monitoring && !Headless) AttachMonitor(instance, process, options, showWindow);
+        if (!Headless) AttachMonitor(instance, process, monitor);
 
         // 退出事件无条件挂上：命令行模式也要把退出码写进启动器日志
-        process.Exited += (_, code) => OnProcessExited(instance, code, sessionId);
+        process.Exited += (_, code) => OnProcessExited(instance, code, sessionId, sessionWindow);
 
         // 无界面模式只保留落盘日志，不建窗口
         if (Headless && privacy.SaveGameLogToFile) OpenGameLogFile(instance);
@@ -604,47 +846,30 @@ public sealed class GameLaunchService
         Application.Current.Dispatcher.Invoke(() =>
         {
             window = new LaunchProgressWindow(instance.Name);
+            // 进度框只显示最后 6 行；想看完整日志随时点这个按钮开独立窗口
+            window.OpenFullLogRequested += (_, _) => OpenDebugWindow(instance);
             window.Show();
         });
         return window!;
     }
 
-    /// <summary>把进程输出喂给监控器（供进度窗显示日志尾巴 / 检测主界面）。</summary>
-    private void StartPump(GameProcess process)
+    /// <summary>把进程输出喂给本次会话的监控器（进度窗日志尾巴 / 端口 / 崩溃检测）。</summary>
+    private void StartPump(GameProcess process, GameLogMonitor monitor)
     {
         // GameProcess 自带输出事件，直接接上即可
-        process.OutputReceived += (_, line) => _monitor?.Feed(line);
+        process.OutputReceived += (_, line) => monitor.Feed(line);
     }
 
-    private void AttachMonitor(GameInstance instance, GameProcess process, LaunchOptions options, bool showWindow)
+    private void AttachMonitor(GameInstance instance, GameProcess process, GameLogMonitor monitor)
     {
         var privacy = _ctx.Settings.Privacy;
-        _monitor = new GameLogMonitor
-        {
-            DetectPort = privacy.NotifyServerPort,
-            DetectCrash = privacy.NotifyOnCrash
-        };
-
-        if (showWindow && !Headless)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                _logWindow ??= new GameLogWindow();
-                _logWindow.Show();
-                _logWindow.Activate();
-            });
-        }
 
         if (privacy.SaveGameLogToFile) OpenGameLogFile(instance);
 
-        _monitor.LineReceived += (_, line) =>
-        {
-            if (!Headless)
-                Application.Current.Dispatcher.BeginInvoke(() => _logWindow?.Append(line));
-            WriteGameLog(line.Raw);
-        };
+        // 窗口内容由 process.OutputReceived 直接驱动，这里只负责落盘，避免同一行写两遍
+        monitor.LineReceived += (_, line) => WriteGameLog(line.Raw);
 
-        _monitor.PortOpened += (_, args) =>
+        monitor.PortOpened += (_, args) =>
         {
             WriteGameLog($"[{DateTime.Now:HH:mm:ss}] [LPML/INFO] {L.F("String.Msg.Game.PortOpenedLog", args.Port)}");
             if (!privacy.NotifyServerPort || Headless) return;
@@ -653,22 +878,15 @@ public sealed class GameLaunchService
                     L.F("String.Msg.Game.PortOpened", args.Port)));
         };
 
-        _monitor.CrashDetected += (_, args) =>
+        monitor.CrashDetected += (_, args) =>
         {
             if (!privacy.NotifyOnCrash || Headless) return;
             Application.Current.Dispatcher.BeginInvoke(() =>
             {
-                if (privacy.ShowLogWindowOnCrash)
-                {
-                    _logWindow ??= new GameLogWindow();
-                    _logWindow.Show();
-                    _logWindow.Activate();
-                }
+                if (privacy.ShowLogWindowOnCrash && _debugWindow is null) OpenDebugWindow(instance);
                 NotifyCrash(instance, args.Reason, args.CrashReportPath);
             });
         };
-
-        process.OutputReceived += (_, text) => _monitor.Feed(text);
     }
 
     private void OpenGameLogFile(GameInstance instance)
@@ -696,9 +914,18 @@ public sealed class GameLaunchService
         catch (IOException) { }
     }
 
-    private void OnProcessExited(GameInstance instance, int exitCode, string? sessionId)
+    private void OnProcessExited(GameInstance instance, int exitCode, string? sessionId,
+        GameLogWindow? sessionWindow)
     {
-        _logWindow?.MarkStopped();
+        // 调试窗口不关、日志不清空：从启动到退出完整留在窗口里，方便回看报错
+        var window = sessionWindow ?? _debugWindow;
+        if (window is not null && !Headless)
+            Application.Current.Dispatcher.BeginInvoke(() =>
+            {
+                window.MarkStopped();
+                window.AppendRaw($"[{DateTime.Now:HH:mm:ss}] [LPML] " +
+                    L.F("String.GameLog.SessionEnded", exitCode));
+            });
         // 只判断"这一次会话"是不是被用户结束，别把别的实例也当成主动关闭
         var killedByUser = App.GameSession?.WasKilledByUser(sessionId) == true;
         var exitText = killedByUser

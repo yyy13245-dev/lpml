@@ -78,7 +78,12 @@ public sealed class DownloadTask : ObservableObject
     /// <summary>取当前步骤的快照，供界面线程安全遍历。</summary>
     public List<TaskStep> SnapshotSteps() { lock (Sync) return Steps.ToList(); }
 
-    public bool Finished { get; set; }
+    private bool _finished;
+    public bool Finished
+    {
+        get => _finished;
+        set { if (Set(ref _finished, value)) OnPropertyChanged(nameof(Summary)); }
+    }
 
     public double Progress
     {
@@ -114,5 +119,16 @@ public sealed class DownloadTask : ObservableObject
                 return L.F("String.Core.Task.Waiting", done, Items.Count);
             }
         }
+    }
+
+    /// <summary>
+    /// Summary / Progress 是计算属性：下载线程改的是文件状态，不会自动通知到
+    /// 绑在任务对象上的一级卡片。界面线程每次刷新时统一触发一次即可。
+    /// </summary>
+    public void NotifyComputed()
+    {
+        OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(Progress));
+        OnPropertyChanged(nameof(Finished));
     }
 }

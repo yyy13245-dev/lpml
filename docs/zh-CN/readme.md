@@ -55,7 +55,7 @@
 - **语言包分离**：全部界面文本放在 `src/LPML.App/Locales/*.xaml`（ResourceDictionary），代码里**零硬编码文案**
 - **引用方式**：XAML 用 `{DynamicResource String.模块.项}`，C# 用 `Lang.T("...")` / `Lang.F("...", args)`，Core 层用 `L.T` / `L.F`
 - **运行时切换**：设置 → 高级 → 界面语言，换语言包后界面**立即刷新**，无需重启（导航树等代码生成的部分自动重建）
-- **内置语言**：简体中文（zh-CN）、English（en-US），各 **1424 条**词条，键名一一对应
+- **内置语言**：简体中文（zh-CN）、English（en-US），各 **1486 条**词条，键名一一对应
 - 键名规范 `String.<模块>.<项>`，例如：
   - `String.Settings.Title`、`String.Account.LoginSuccess`、`String.Msg.Download.Installing`
 - 新增语言只需复制一份 `Locales/zh-CN.xaml` → 改文件名与值 → 在 `LauncherLanguage` 加一档
@@ -276,6 +276,12 @@ LPML.exe --cli [选项]
 - **安装游戏**：版本列表（显示状态与条数，失败时给出原因）→ **双击版本进入独立安装页**，
   在里面填保存名称、选加载器（Fabric / Quilt / Forge / NeoForge / OptiFine，列表按该 MC 版本拉取）、
   选实例文件夹、决定是否下载资源文件与创建实例
+- **版本分类**：正式版 / 快照（含预发布版与候选版）/ 愚人节版本 / 历史版本 / 全部，
+  列表不再截断成前 400 条，官方清单里的早期快照与愚人节构建都能搜到。
+  愚人节构建在官方清单里同样标为 `snapshot`，由启动器按已知版本 ID 与发布日期单独归类；
+  测试与玩笑构建不保证可启动，加载器也可能没有适配版本，建议装进独立实例与文件夹
+- **版本 JSON 保留原文**：当前源拿不到或内容不符时回退官方地址，落盘不经过模型重写，
+  避免快照与愚人节版本里的额外启动参数丢失
 - **加载器不单独占页面**：选中版本后直接在安装页里选，选好后名称自动带后缀（`1.21.4` → `1.21.4-fabric`），
   **但你已经手动改过名称就不再动它**
 - **整合包导入**：本地文件导入 + **在线获取（Modrinth）**，在线列表按下载量排序，
@@ -485,7 +491,7 @@ Windows 任务管理器的「进程」页会把两个 LPML 折叠在**同一组*
 > **不随源码仓库分发**；如需自行分发，请遵守 Terracotta 与 EasyTier 各自的许可证。
 
 ### 其他
-- **i18n**：1424 条词条分离到 `Locales/zh-CN.xaml` 与 `Locales/en-US.xaml`，支持运行时切换
+- **i18n**：1486 条词条分离到 `Locales/zh-CN.xaml` 与 `Locales/en-US.xaml`，支持运行时切换
 - **实例隔离**：独立 mods / saves / config；两种隔离模式可切换与互相迁移，实例单独覆盖
 - 实例级覆盖：内存、Java 路径、JVM 参数、窗口尺寸、全屏、服务器直连
 - 模组管理：读取 fabric.mod.json / mods.toml / mcmod.info 元信息，一键启停（`.jar.disabled`）、删除、添加
@@ -513,7 +519,7 @@ src/
 │  ├─ Instances/ Mods/ Integration/
 │  └─ Utils/             # JSON / Hash / File / ObservableObject
 └─ LPML.App/             # WPF 界面（net10.0-windows）
-   ├─ Locales/           # ★ 语言包：zh-CN.xaml / en-US.xaml（各 1331 条）
+   ├─ Locales/           # ★ 语言包：zh-CN.xaml / en-US.xaml（各 1486 条）
    ├─ Guard/             # 日志守护进程：进程入口、命名管道协议、看门狗
    ├─ Services/          # LanguageService（运行时切换语言包）
    ├─ Themes/ Styles/    # 主题画刷与控件样式（含动效）

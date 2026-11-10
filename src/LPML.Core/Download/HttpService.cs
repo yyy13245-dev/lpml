@@ -77,7 +77,7 @@ public sealed class HttpService
             };
             _client.DefaultRequestHeaders.UserAgent.Clear();
             _client.DefaultRequestHeaders.UserAgent.ParseAdd(string.IsNullOrWhiteSpace(settings.UserAgent)
-                ? "LPML/1.0"
+                ? "LPML/0.0.001"
                 : settings.UserAgent);
             _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
             _client.DefaultRequestHeaders.ConnectionClose = false;
@@ -179,22 +179,46 @@ public sealed class HttpService
             if ((int)response.StatusCode == 429)
                 throw new HttpRequestException(L.T("String.Core.Err.Http.TooManyRequests"));
             if ((int)response.StatusCode == 403)
+            {
+                // 带上完整 URL：403 到底是路径不对、构件没同步，还是 WAF 拒绝，
+                // 一眼就能分辨，不用再从文件名猜。
+                Log.Warn("Download", L.T("String.Core.Err.Http.Forbidden") + " " + url);
                 throw new HttpRequestException(L.T("String.Core.Err.Http.Forbidden"));
+            }
 
             response.EnsureSuccessStatusCode();
             var total = response.Content.Headers.ContentLength ?? -1;
             FileHelper.EnsureDirectory(Path.GetDirectoryName(destination));
-            await using var fs = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, true);
-            await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            var buffer = new byte[81920];
-            long received = 0;
-            int read;
-            while ((read = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+            try
             {
-                if (throttle is not null) await throttle(read, ct).ConfigureAwait(false);
-                await fs.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                received += read;
-                progress?.Report((received, total));
+                await using var fs = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, true);
+                await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+                var buffer = new byte[81920];
+                long received = 0;
+                int read;
+                // ResponseHeadersRead 之后 HttpClient.Timeout 不再约束 body 读取：
+                // 连上却一直不吐字节的请求会永久挂起，必须按「无进展」自己判超时。
+                while ((read = await ReadWithStallAsync(stream, buffer, 0, buffer.Length, ct).ConfigureAwait(false)) > 0)
+                {
+                    if (throttle is not null) await throttle(read, ct).ConfigureAwait(false);
+                    await fs.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                    received += read;
+                    progress?.Report((received, total));
+                }
+                // 旧逻辑把「读循环正常结束」等同于下载成功：连接中途断开、chunked 提前
+                // 终止、以及服务器返回 200 却一个字节不吐，都会留下半截甚至 0 字节的
+                // jar；第三方加载器库没有 sha1/size，下一轮「跳过已存在文件」会永久放过它。
+                if (received == 0)
+                    throw new IOException("Empty response body for " + url);
+                if (total > 0 && received != total)
+                    throw new IOException($"Incomplete body for {url}: expected {total}, got {received}");
+            }
+            catch
+            {
+                // 失败的半成品绝不能留在目标路径：否则它会被当成「已存在」的完整文件，
+                // 重试还没开始就已经宣告成功，classpath 里永远是这个坏 jar。
+                FileHelper.TryDelete(destination);
+                throw;
             }
             return true;
         }, url, token).ConfigureAwait(false);
@@ -219,7 +243,11 @@ public sealed class HttpService
                 throw new IOException(L.T("String.Core.Err.Ssl"), ex);
             return (null, false);
         }
-        catch (TaskCanceledException) { return (null, false); }
+        catch (TaskCanceledException)
+        {
+            // HEAD 超时也是源故障：交给外层换源，别静默当成「不支持 Range」
+            throw new StalledTransferException(L.F("String.Core.Err.Http.Stalled", StallSeconds));
+        }
     }
 
     /// <summary>是否 SSL / TLS 握手失败。</summary>
@@ -239,17 +267,43 @@ public sealed class HttpService
 
     public async Task<Stream> OpenRangeAsync(string url, long start, long? end, CancellationToken token)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Range = end.HasValue
             ? new RangeHeaderValue(start, end.Value)
             : new RangeHeaderValue(start, null);
-        var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+
+        HttpResponseMessage response;
+        try
+        {
+            // 等响应头由 HttpClient.Timeout 管住；ResponseHeadersRead 之后它不再约束 body，
+            // body 交给调用方的 ReadWithStallAsync。这里不引入临时 CTS：返回的流会持有
+            // 它的取消注册，提前释放会在后续读取时踩到已释放对象。
+            response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+        }
+        catch (TaskCanceledException) when (!token.IsCancellationRequested)
+        {
+            throw new StalledTransferException(L.F("String.Core.Err.Http.Stalled", StallSeconds));
+        }
         if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.PartialContent)
         {
             response.Dispose();
             throw new HttpRequestException($"HTTP {(int)response.StatusCode} for {url}");
         }
         return await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+    }
+
+    /// <summary>403 / 404 / 429 属于源的问题，必须在换源后重试，不能原地退避。</summary>
+    private static bool IsSourceStatusError(Exception ex)
+    {
+        for (var e = ex; e is not null; e = e.InnerException)
+        {
+            var m = e.Message ?? "";
+            if (m.Contains("HTTP 403") || m.Contains("(403)") || m.Contains("（403）")
+                || m.Contains("HTTP 404") || m.Contains("(404)") || m.Contains("（404）")
+                || m.Contains("(429)") || m.Contains("（429）") || m.Contains("HTTP 429"))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -286,7 +340,13 @@ public sealed class HttpService
                 return await action(token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            // 停滞要交给外层换源，不能在同一个卡死的源上把重试次数耗光
+            catch (StalledTransferException) { throw; }
             catch (Exception ex) when (IsHostFailure(ex)) { throw; }
+            // 403 / 404 / 429 是「这个源不对」，不是暂时抖动：原地退避重试 4 次
+            // 会把限流越撞越狠（外层还会再重试一轮，等于 16 次请求砸同一个域名）。
+            // 立刻抛回外层，由 DownloadManager 换到另一个源。
+            catch (Exception ex) when (IsSourceStatusError(ex)) { throw; }
             catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or TimeoutException)
             {
                 last = ex;
@@ -298,4 +358,37 @@ public sealed class HttpService
         }
         throw last ?? new IOException(L.F("String.Core.Err.Download.Failed", url));
     }
+
+    /// <summary>无进展超时（秒）：整体超时的一半，夹在 5~120 秒之间。</summary>
+    private int StallSeconds => Math.Clamp(Math.Max(5, _settings.TimeoutSeconds / 2), 5, 120);
+
+    /// <summary>
+    /// 读一次数据，把「超过阈值没收到任何字节」判为源停滞。
+    /// 调用方每读到一批数据就会再次进入本方法，计时自然重置——按无进展计时，
+    /// 慢但持续在传的大文件不会被误杀。
+    /// </summary>
+    public async Task<int> ReadWithStallAsync(Stream stream, byte[] buffer, int offset, int count,
+        CancellationToken token)
+    {
+        var seconds = StallSeconds;
+        using var guard = CancellationTokenSource.CreateLinkedTokenSource(token);
+        guard.CancelAfter(TimeSpan.FromSeconds(seconds));
+        try
+        {
+            return await stream.ReadAsync(buffer.AsMemory(offset, count), guard.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            throw new StalledTransferException(L.F("String.Core.Err.Http.Stalled", seconds));
+        }
+    }
+}
+
+/// <summary>
+/// 连接已建立（甚至响应头都回来了），但长时间没有收到任何数据。
+/// 按源故障处理：外层拉黑该域名并换到下一个镜像，而不是原地重试到超时。
+/// </summary>
+public sealed class StalledTransferException : IOException
+{
+    public StalledTransferException(string message) : base(message) { }
 }

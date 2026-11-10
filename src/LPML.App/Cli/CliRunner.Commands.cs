@@ -5,6 +5,7 @@ using LPML.App.Windows;
 using LPML.Core;
 using LPML.Core.Config;
 using LPML.Core.Download;
+using LPML.Core.Game;
 using LPML.Core.Game.Models;
 using LPML.Core.Instances;
 using LPML.Core.Integration;
@@ -22,7 +23,8 @@ public sealed partial class CliRunner
     private static readonly string[] ConfigKeys =
     {
         "language", "theme", "perf", "mirror", "smallconcurrency", "largeconcurrency",
-        "retries", "timeout", "speedlimit", "verifysha1", "loglevel", "title",
+        "retries", "autoretry", "autoretryrounds", "autoretrydelay", "timeout", "speedlimit",
+        "verifysha1", "loglevel", "title",
         "guard", "guardtimeout", "autodownloadjava", "autodownloadmissing", "afterlaunch"
     };
 
@@ -411,8 +413,23 @@ public sealed partial class CliRunner
                     var manifest = _ctx.ManifestService.GetManifestAsync(false, _shellToken)
                         .GetAwaiter().GetResult();
                     var versions = manifest?.Versions ?? new List<ManifestVersion>();
-                    _output(Lang.F("String.Cli.CmdVersionList", Math.Min(20, versions.Count)));
-                    foreach (var v in versions.Take(20)) _output($"  {v.Id,-16} {v.Type}");
+
+                    var filter = Arg(t, 1).ToLowerInvariant();
+                    var count = int.TryParse(Arg(t, 2), out var requested)
+                        ? Math.Clamp(requested, 1, 1000)
+                        : 20;
+                    IEnumerable<ManifestVersion> query = filter switch
+                    {
+                        "release" => versions.Where(v => VersionClassifier.Classify(v) == VersionChannel.Release),
+                        "snapshot" => versions.Where(v => VersionClassifier.Classify(v) == VersionChannel.Snapshot),
+                        "april" or "aprilfools" => versions.Where(v => VersionClassifier.Classify(v) == VersionChannel.AprilFools),
+                        "legacy" => versions.Where(v => VersionClassifier.Classify(v) == VersionChannel.Legacy),
+                        _ => versions
+                    };
+                    var rows = query.Take(count).ToList();
+                    _output(Lang.F("String.Cli.CmdVersionList", rows.Count));
+                    foreach (var v in rows)
+                        _output($"  {v.Id,-16} {Lang.T(VersionClassifier.ChannelKey(VersionClassifier.Classify(v)))}");
                 }
                 catch (Exception ex) { Failed(ex.Message); }
                 break;
@@ -551,7 +568,7 @@ public sealed partial class CliRunner
             case "add":
             {
                 var path = Rest(tail, 1);
-                if (path.Length == 0) { Usage("java add <java.exe 路径>"); return; }
+                if (path.Length == 0) { Usage("java add <Java 路径>"); return; }
                 try
                 {
                     var added = _ctx.Javas.Add(path);
@@ -671,6 +688,9 @@ public sealed partial class CliRunner
             "smallconcurrency" => s.Download.SmallFileConcurrency.ToString(CultureInfo.InvariantCulture),
             "largeconcurrency" => s.Download.LargeFileConcurrency.ToString(CultureInfo.InvariantCulture),
             "retries" => s.Download.RetryCount.ToString(CultureInfo.InvariantCulture),
+            "autoretry" => s.Download.EnableAutoRetryRound.ToString(),
+            "autoretryrounds" => s.Download.AutoRetryRounds.ToString(CultureInfo.InvariantCulture),
+            "autoretrydelay" => s.Download.AutoRetryDelaySeconds.ToString(CultureInfo.InvariantCulture),
             "timeout" => s.Download.TimeoutSeconds.ToString(CultureInfo.InvariantCulture),
             "speedlimit" => s.Download.SpeedLimitKb.ToString(CultureInfo.InvariantCulture),
             "verifysha1" => s.Download.VerifySha1.ToString(),
@@ -712,6 +732,9 @@ public sealed partial class CliRunner
             case "smallconcurrency": ok = TryInt(value, out var small); if (ok) s.Download.SmallFileConcurrency = small; break;
             case "largeconcurrency": ok = TryInt(value, out var large); if (ok) s.Download.LargeFileConcurrency = large; break;
             case "retries": ok = TryInt(value, out var retries); if (ok) s.Download.RetryCount = retries; break;
+            case "autoretry": ok = bool.TryParse(value, out var autoRetry); if (ok) s.Download.EnableAutoRetryRound = autoRetry; break;
+            case "autoretryrounds": ok = TryInt(value, out var autoRounds); if (ok) s.Download.AutoRetryRounds = Math.Clamp(autoRounds, 0, 20); break;
+            case "autoretrydelay": ok = TryInt(value, out var autoDelay); if (ok) s.Download.AutoRetryDelaySeconds = Math.Clamp(autoDelay, 0, 3600); break;
             case "timeout": ok = TryInt(value, out var timeout); if (ok) s.Download.TimeoutSeconds = timeout; break;
             case "speedlimit": ok = TryInt(value, out var limit); if (ok) s.Download.SpeedLimitKb = limit; break;
             case "verifysha1": ok = bool.TryParse(value, out var verify); if (ok) s.Download.VerifySha1 = verify; break;

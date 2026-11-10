@@ -56,6 +56,10 @@ public sealed class ChunkedDownloader
             // 体积已知且不到分段阈值的小文件：直接单线程下载，跳过 HEAD 探测。
             // 一次版本安装有几百上千个这类小文件，逐个探测等于请求数翻倍，是装得慢的主因之一。
             var thresholdBytes = _settings.ChunkThresholdMb * 1024L * 1024L;
+            // 队列里只剩一两个文件时（文件级并发只有 1），把分段门槛临时降到 256KB：
+            // 否则一个 1~2MB 的加载器 jar 会被判成「小文件」直接单线程，
+            // 单连接又容易被源停滞反复拖住，界面上就一直停在「单线程下载」。
+            if (item.IdleQueueBoost) thresholdBytes = Math.Min(thresholdBytes, 256L * 1024L);
             var knownSize = item.ExpectedSize ?? 0;
             if (knownSize > 0 && knownSize < thresholdBytes)
             {
@@ -84,8 +88,18 @@ public sealed class ChunkedDownloader
             var total = length ?? item.ExpectedSize ?? 0;
             item.TotalBytes = total > 0 ? total : item.ExpectedSize ?? 0;
 
-            var threshold = _settings.ChunkThresholdMb * 1024L * 1024L;
-            var canChunk = acceptRanges && total > 0 && total >= threshold && _settings.MaxChunksPerFile > 1;
+            var canChunk = acceptRanges && total > 0 && total >= thresholdBytes && _settings.MaxChunksPerFile > 1;
+
+            // BMCLAPI 的大文件会 302 到 OpenBMCLAPI 的签名节点（URL 带 s / e 参数），
+            // 签名 URL 通常不接受 Range 分段，多段请求会被 WAF 判 403。
+            // 这类域名一律单线程，跟随重定向拿完整文件即可。
+            try
+            {
+                var h = new Uri(item.Url).Host;
+                if (h.EndsWith("bangbang93.com", StringComparison.OrdinalIgnoreCase))
+                    canChunk = false;
+            }
+            catch (UriFormatException) { /* 相对地址按原判定走 */ }
 
             // 单线程文件也占 1 条连接，这样预算才能真实反映当前压力
             var streams = _budget?.Acquire(1) ?? 0;
@@ -93,13 +107,17 @@ public sealed class ChunkedDownloader
             {
                 if (!canChunk)
                 {
+                    // 只有队列空闲、且源明确不支持 Range 时才留一句说明，
+                    // 免得用户看到「单线程」却不知道为什么没并发。
+                    if (item.IdleQueueBoost && total >= thresholdBytes)
+                        Log.Info("Download", L.T("String.Core.Status.SingleThread") + " (Range unsupported): " + item.Name);
                     await DownloadSingleAsync(item, ct).ConfigureAwait(false);
                 }
                 else
                 {
                     // 分段下载：归还刚才的 1 条，按预算重新申请段数
                     _budget?.Release(streams);
-                    streams = PlanChunks(total);
+                    streams = PlanChunks(total, item);
                     await DownloadChunksAsync(item, total, streams, ct).ConfigureAwait(false);
                 }
             }
@@ -115,11 +133,18 @@ public sealed class ChunkedDownloader
         }
         catch (OperationCanceledException)
         {
-            item.Status = DownloadStatus.Canceled;
-            item.StatusText = L.T("String.Core.Status.Cancelled");
+            // PauseTask / Pause 已经把状态设成 Paused，这里不能再覆盖成
+            // 「已取消」——用户点的是暂停，不是取消。
+            if (item.Status != DownloadStatus.Paused)
+            {
+                item.Status = DownloadStatus.Canceled;
+                item.StatusText = L.T("String.Core.Status.Cancelled");
+            }
         }
         catch (Exception ex)
         {
+            // 429 说明这个源已经嫌请求多了：下次重试收回分段，别再用更多连接加压。
+            if ((ex.Message ?? "").Contains("429")) item.IdleQueueBoost = false;
             item.Status = DownloadStatus.Failed;
             item.StatusText = L.T("String.Core.Status.Failed");
             item.Error = ex.Message;
@@ -133,9 +158,12 @@ public sealed class ChunkedDownloader
 
     private bool IsAlreadyValid(DownloadItem item)
     {
+        // 强制重下：内容错误但格式合法的 jar 不能被「已存在」挡回去
+        if (item.ForceRedownload) return false;
         try
         {
             if (!File.Exists(item.Destination)) return false;
+            if (!FileHelper.IsUsableLibraryFile(item.Destination)) return false;
             var info = new FileInfo(item.Destination);
             if (item.ExpectedSize.HasValue && item.ExpectedSize.Value > 0 && info.Length != item.ExpectedSize.Value) return false;
             if (item.ExpectedSize.HasValue && item.ExpectedSize.Value == 0 && info.Length == 0) return false;
@@ -174,15 +202,29 @@ public sealed class ChunkedDownloader
     /// 基准值按体积算（每 8MB 一段，不超过设置上限）；
     /// 如果当前空闲预算还很充足（说明队列里没别的东西在跑），就放宽段数把带宽吃满。
     /// </summary>
-    private int PlanChunks(long total)
+    private int PlanChunks(long total, DownloadItem item)
     {
         var baseChunks = Math.Min(_settings.MaxChunksPerFile, (int)Math.Ceiling(total / (8d * 1024 * 1024)));
         baseChunks = Math.Max(1, baseChunks);
+        // 队列空闲时至少开 2 段，把空出来的连接预算真正用上；
+        // 但这个源刚出过 403 / 429 / 停滞的话就收回到 2 段，别拿更多连接去撞限流。
+        if (item.IdleQueueBoost) baseChunks = Math.Max(2, baseChunks);
+        // 换过源说明这个源刚失败过：队列里还有很多文件在跑时收窄到 2 段，
+        // 免得连累别人；但只剩这一个文件时总连接数完全可控，不必再压，
+        // 否则最后一个加载器 jar 永远只能 2 线程。真被 429 时 DownloadAsync
+        // 会把 IdleQueueBoost 置回 false，下一次重试仍会收窄。
+        var restrict = item.TriedHosts.Count > 0 && !item.IdleQueueBoost;
+        if (restrict) baseChunks = Math.Min(baseChunks, 2);
 
         if (_budget is null) return baseChunks;
 
-        // 放宽上限：默认分段数的 2 倍，但不超过全局连接上限
-        var boostCap = Math.Min(_settings.MaxChunksPerFile * 2, Math.Max(baseChunks, _budget.Max));
+        // 放宽上限：默认分段数的 2 倍、但每段至少 256KB。
+        // 1~2MB 的加载器 jar 以前会被放到十几段，请求太碎反而更容易撞 429。
+        var bySize = Math.Clamp((int)Math.Ceiling(total / (256d * 1024)), 1, _settings.MaxChunksPerFile);
+        var boostCap = restrict
+            ? baseChunks   // 这个源刚失败过，别再放宽段数
+            : Math.Min(Math.Min(_settings.MaxChunksPerFile * 2, Math.Max(baseChunks, _budget.Max)),
+                       Math.Max(baseChunks, bySize));
         var granted = _budget.Acquire(baseChunks, boostCap);
 
         if (granted > baseChunks)
@@ -241,7 +283,7 @@ public sealed class ChunkedDownloader
                 await using var stream = await _http.OpenRangeAsync(item.Url, offset, end, ct).ConfigureAwait(false);
                 var buffer = new byte[81920];
                 int read;
-                while ((read = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+                while ((read = await _http.ReadWithStallAsync(stream, buffer, 0, buffer.Length, ct).ConfigureAwait(false)) > 0)
                 {
                     await _limiter.ConsumeAsync(read, ct).ConfigureAwait(false);
                     await fs.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
@@ -283,6 +325,8 @@ public sealed class ChunkedDownloader
         item.StatusText = L.T("String.Core.Status.Verifying");
         await Task.Yield();
         if (!File.Exists(item.Destination)) throw new IOException(L.F("String.Core.Err.Download.NoResult", item.Destination));
+        if (!FileHelper.IsUsableLibraryFile(item.Destination))
+            throw new IOException(L.F("String.Core.Err.Download.InvalidJar", item.Destination));
         var info = new FileInfo(item.Destination);
         if (_settings.VerifyFileSize && item.ExpectedSize is > 0 && info.Length != item.ExpectedSize.Value)
             throw new IOException(L.F("String.Core.Err.Download.SizeMismatch", item.ExpectedSize, info.Length));

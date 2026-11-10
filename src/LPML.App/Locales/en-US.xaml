@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML en-US 语言包 · English -->
-    <!-- 词条 1424 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1485 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">Preparing…</sys:String>
@@ -205,7 +205,7 @@
     <sys:String x:Key="String.Settings.OpenPortableAccount">Open the portable accounts folder</sys:String>
     <sys:String x:Key="String.Settings.MoveAllAccounts">Move all accounts to the default location</sys:String>
     <sys:String x:Key="String.Settings.GroupJava">Java and memory</sys:String>
-    <sys:String x:Key="String.Settings.JavaPathHint">Java executable (blank for auto-detect)</sys:String>
+    <sys:String x:Key="String.Settings.JavaPathHint">Full path to a Java executable (blank for auto-detect; paths without an .exe suffix are supported, e.g. Java under Wine / Linux / macOS)</sys:String>
     <sys:String x:Key="String.Settings.BrowseJava">Browse</sys:String>
     <sys:String x:Key="String.Settings.AutoDetectJava">Auto-detect installed Java</sys:String>
     <sys:String x:Key="String.Settings.AutoRuntime">Fall back to the official runtime (.minecraft\runtime)</sys:String>
@@ -312,7 +312,7 @@
     <sys:String x:Key="String.Msg.Common.Cancelled">Cancelled</sys:String>
     <sys:String x:Key="String.Msg.Common.OpenDirFailed">Could not open the folder: </sys:String>
     <sys:String x:Key="String.Msg.Common.PickJava">Choose Java</sys:String>
-    <sys:String x:Key="String.Msg.Common.JavaFilter">javaw.exe|javaw.exe|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="String.Msg.Common.JavaFilter">Java executable (javaw.exe;java.exe;javaw;java)|javaw.exe;java.exe;javaw;java|Executable (*.exe)|*.exe|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="String.Msg.Common.ImportFailedTitle">Import failed</sys:String>
     <sys:String x:Key="String.Msg.Common.LoginFailedTitle">Sign-in failed</sys:String>
 
@@ -468,7 +468,7 @@
     <sys:String x:Key="String.Msg.InstanceSettings.IsolationApplied">Directory layout rebuilt with the current settings.</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.LastLaunch">Last launch: {0}</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.LaunchFailed">Launch failed: {0}</sys:String>
-    <sys:String x:Key="String.Msg.InstanceSettings.MissingCount">{0} files missing — queued for download.</sys:String>
+    <sys:String x:Key="String.Msg.InstanceSettings.MissingCount">Integrity check: {0} files missing. Use "Complete game files" to repair.</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.ModSummary">{0} mods · {1} enabled · {2} disabled</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.MonitorOff">Off (global: off)</sys:String>
     <sys:String x:Key="String.Msg.InstanceSettings.MonitorOn">On (global: on)</sys:String>
@@ -612,6 +612,7 @@
     <!-- ══ 下载源 ══ -->
     <sys:String x:Key="String.Mirror.Official">Official (Mojang / Fabric / Forge)</sys:String>
     <sys:String x:Key="String.Mirror.Bmclapi">BMCLAPI (bangbang93)</sys:String>
+    <sys:String x:Key="String.Settings.BmclapiCredit">When BMCLAPI is selected, files are served by BMCLAPI (bangbang93.com) and its mirror nodes; copyright remains with the original sources.</sys:String>
     <sys:String x:Key="String.Mirror.Mcbbs">MCBBS mirror</sys:String>
     <sys:String x:Key="String.Mirror.FastMCMirror">FastMinecraftMirror</sys:String>
     <sys:String x:Key="String.Settings.FastMCMirrorHint">FastMinecraftMirror maps each official domain separately — the custom field takes its launcher-meta domain (default https://launchermeta.fastmcmirror.org).</sys:String>
@@ -685,6 +686,7 @@
     <sys:String x:Key="String.Core.Group.Assets">Assets</sys:String>
     <sys:String x:Key="String.Core.Group.Libraries">Libraries</sys:String>
     <sys:String x:Key="String.Core.Group.Natives">Natives</sys:String>
+<sys:String x:Key="String.Core.Group.LoaderLibraries">Loader libraries</sys:String>
     <sys:String x:Key="String.Core.Group.Modpack">Modpack</sys:String>
     <sys:String x:Key="String.Core.Group.JavaRuntime">Java runtime</sys:String>
 
@@ -703,8 +705,10 @@
 
     <!-- ══ Java 列表管理 ══ -->
     <sys:String x:Key="String.Java.ListTitle">Java list</sys:String>
-    <sys:String x:Key="String.Java.ListHint">Click “Add Java” and pick a java executable — the version, name and vendor are detected automatically, and other Javas in the same JDK folder (and its neighbours) are picked up too.</sys:String>
+    <sys:String x:Key="String.Java.ListHint">Click “Add Java” to pick a java executable, or type the full path below and click “Add by path”; the version, name and vendor are detected automatically, and other Javas in the same JDK folder (and its neighbours) are picked up too. Paths without an .exe suffix are supported.</sys:String>
     <sys:String x:Key="String.Java.Add">Add Java</sys:String>
+<sys:String x:Key="String.Java.AddByPath">Add by path</sys:String>
+<sys:String x:Key="String.Java.AddByPathEmpty">Please enter the full path to a Java executable first.</sys:String>
     <sys:String x:Key="String.Java.ScanSystem">Full scan</sys:String>
     <sys:String x:Key="String.Java.SyncPath">Sync PATH</sys:String>
     <sys:String x:Key="String.Java.Validate">Validate</sys:String>
@@ -1104,6 +1108,15 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Install.FolderHint">Which instance folder to install into.</sys:String>
     <sys:String x:Key="String.Install.Start">Install</sys:String>
     <sys:String x:Key="String.Install.Done">Install finished</sys:String>
+<sys:String x:Key="String.Install.Step.Prepare">Prepare version metadata</sys:String>
+<sys:String x:Key="String.Install.Step.Vanilla">Download vanilla files</sys:String>
+<sys:String x:Key="String.Install.Step.Loader">Install loader</sys:String>
+<sys:String x:Key="String.Install.Step.LoaderLibs">Download loader libraries</sys:String>
+<sys:String x:Key="String.Install.Step.Instance">Create game instance</sys:String>
+<sys:String x:Key="String.Install.Step.Finish">Finish</sys:String>
+<sys:String x:Key="String.Install.Step.FileCount">{0} files</sys:String>
+<sys:String x:Key="String.Install.Step.LibsSkipped">Loader libraries already present</sys:String>
+<sys:String x:Key="String.Install.Step.LoaderFailed">Loader installation did not complete</sys:String>
     <sys:String x:Key="String.Install.LoadingLoader">Fetching loader versions…</sys:String>
     <sys:String x:Key="String.Install.NoLoaderVersion">No loader version available for this game version.</sys:String>
     <sys:String x:Key="String.Install.VanillaHint">Vanilla: install the game only.</sys:String>
@@ -1190,7 +1203,9 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Settings.BackgroundCopyFailed">Failed to copy the background image: </sys:String>
     <sys:String x:Key="String.Core.Task.Creating">Creating task…</sys:String>
     <sys:String x:Key="String.Task.Creating">Creating task…</sys:String>
-    <sys:String x:Key="String.Core.Err.Http.TooManyRequests">Rate limited by the mirror (429) - concurrency is too high. Lower it in Settings > Download (e.g. 8-12), or switch mirrors.</sys:String>
+    <sys:String x:Key="String.Core.Err.Http.TooManyRequests">This download source is rate limited (429); switching to another source automatically. If it keeps happening, retry later or change the source in Settings.</sys:String>
+    <sys:String x:Key="String.Core.Err.Http.Stalled">Connection established but no data arrived for {0}s (stalled source); switching mirror.</sys:String>
+    <sys:String x:Key="String.Core.Log.Download.StallSwitch">Source stalled, switching mirror: {0} → {1}</sys:String>
     <sys:String x:Key="String.Core.Err.Http.Forbidden">The mirror refused this file (403). Try another mirror.</sys:String>
     <sys:String x:Key="String.Settings.LauncherTitle">Launcher title</sys:String>
     <sys:String x:Key="String.Settings.LauncherTitleHint">Changes the launcher's own window title (not the game's). Leave empty for LPML; you can also use LPML Launcher.</sys:String>
@@ -1286,6 +1301,8 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Launch.RepairedVersionFiles">Re-downloaded game files for {0} (instance: {1})</sys:String>
     <sys:String x:Key="String.Launch.RepairNoManifestEntry">Version {0} not found in the manifest; cannot auto-repair</sys:String>
     <sys:String x:Key="String.Launch.RepairJsonFailed">Repair failed: could not fetch the version JSON for {0}</sys:String>
+    <sys:String x:Key="String.Launch.RepairCannot">The version JSON for {0} is missing and could not be restored automatically; reinstall this version from Download Center, or check your connection and retry.</sys:String>
+    <sys:String x:Key="String.Launch.RepairJsonRestored">Restored the version JSON for {0}</sys:String>
     <sys:String x:Key="String.Launch.RepairFailed">Auto-repair for {0} failed</sys:String>
     <sys:String x:Key="String.Task.StepCancelled">Cancelled</sys:String>
     <sys:String x:Key="String.Task.StepPreparing">Preparing the file list for {0}</sys:String>
@@ -1305,6 +1322,8 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Task.GroupPackHint">Mods and overrides bundled in the modpack</sys:String>
     <sys:String x:Key="String.Task.GroupVanilla">Vanilla game files</sys:String>
     <sys:String x:Key="String.Task.GroupVanillaHint">Version JSON, client jar, libraries and assets</sys:String>
+<sys:String x:Key="String.Task.GroupLoader">Loader files</sys:String>
+<sys:String x:Key="String.Task.GroupLoaderHint">Libraries shipped with the loader profile</sys:String>
     <sys:String x:Key="String.Task.GroupGeneral">Other files</sys:String>
     <sys:String x:Key="String.Task.GroupGeneralHint">Other downloads in this task</sys:String>
     <sys:String x:Key="String.Task.GroupCount">{0}/{1} files</sys:String>
@@ -1551,4 +1570,51 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Multi.RestartCoreOk">Core restarted. Please retry the previous action.</sys:String>
     <sys:String x:Key="String.Multi.RestartCoreHint">Only the core launched by this launcher is restarted; an externally running core is re-detected, not terminated.</sys:String>
     <sys:String x:Key="String.Multi.Err.RestartFailed">Failed to restart the multiplayer core: {0}</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryBatch">Auto-retry failed files as a batch</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryBatchHint">After a round finishes, all files that still failed are queued again together, so you don't have to retry them one by one. "Retry count" above is the immediate per-file retry; this is a whole-batch retry round.</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryRounds">Maximum retry rounds</sys:String>
+    <sys:String x:Key="String.Settings.AutoRetryDelay">Wait before each round (seconds)</sys:String>
+    <sys:String x:Key="String.Core.Status.AutoRetryWait">Batch retry {0}/{1}: retrying {3} files in {2}s</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Start">Batch retry round {0}/{1}: {2} files failed, waiting {3}s</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Done">Batch retry round {0} finished, {1} files still failed</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Exhausted">Reached the maximum of {0} batch retry rounds; {1} files still failed and need a manual retry</sys:String>
+    <sys:String x:Key="String.Core.Log.AutoRetry.Cancelled">Batch retry stopped (paused or cancelled)</sys:String>
+
+    <!-- Version channels: the official manifest labels April Fools builds as snapshot -->
+    <sys:String x:Key="String.Download.AprilFools">April Fools</sys:String>
+    <sys:String x:Key="String.Download.Legacy">Legacy</sys:String>
+    <sys:String x:Key="String.Download.Type.Release">Release</sys:String>
+    <sys:String x:Key="String.Download.Type.Snapshot">Snapshot</sys:String>
+    <sys:String x:Key="String.Download.Type.AprilFools">April Fools</sys:String>
+    <sys:String x:Key="String.Download.Type.Legacy">Legacy</sys:String>
+    <sys:String x:Key="String.Download.FilteredVersionCount">{0} versions, showing {1}</sys:String>
+    <sys:String x:Key="String.Download.UnstableHint">Snapshots and April Fools builds are official test or joke builds. They may fail to launch, and loaders may have no matching version; install them into a separate instance and folder.</sys:String>
+    <sys:String x:Key="String.Install.UnstableHint">This is an official test or joke build with no launch guarantee; an empty loader list is expected.</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.FetchFailed">Fetch failed: {0}</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.VersionIdMismatch">Version {0} returned JSON with id {1}; skipped</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.VersionShaMismatch">Version {0} JSON hash differs from the manifest; continuing with the parsed content</sys:String>
+    <sys:String x:Key="String.Core.Log.Manifest.MirrorIncomplete">The current source manifest has no April Fools builds; merged with the official manifest</sys:String>
+    <sys:String x:Key="String.Core.Log.Install.AssetIndexMissing">Version {0} has no assetIndex; skipped the asset index download</sys:String>
+    <sys:String x:Key="String.Msg.Download.LoaderLibraries">Fetching loader libraries…</sys:String>
+    <sys:String x:Key="String.Core.Err.Download.InvalidJar">Corrupted dependency (not a valid JAR), re-downloading: {0}</sys:String>
+    <sys:String x:Key="String.Folder.LayoutSection">Storage layout</sys:String>
+<sys:String x:Key="String.Folder.LayoutSplitName">Split (version files and instance data apart)</sys:String>
+    <sys:String x:Key="String.Folder.LayoutMergedName">Merged (PCL / HMCL style)</sys:String>
+    <sys:String x:Key="String.Folder.LayoutCurrent">Current layout: {0}</sys:String>
+    <sys:String x:Key="String.Folder.LayoutToMerged">Switch to merged layout</sys:String>
+    <sys:String x:Key="String.Folder.LayoutToSplit">Switch to split layout</sys:String>
+    <sys:String x:Key="String.Folder.LayoutDone">Converted {0} instances</sys:String>
+    <sys:String x:Key="String.Folder.LayoutHint">Applies per folder; both layouts can launch. Stored in lpml-folder.json.</sys:String>
+    <sys:String x:Key="String.Toast.Working">Working…</sys:String>
+    <sys:String x:Key="String.Toast.Done">Done</sys:String>
+    <sys:String x:Key="String.Toast.Failed">Operation failed</sys:String>
+
+    <!-- 调试日志会话与启动主类诊断 -->
+    <sys:String x:Key="String.GameLog.SessionTitle">Game log — {0} · {1}</sys:String>
+    <sys:String x:Key="String.GameLog.SessionEnded">Game process exited (code {0}); this session's log is kept in full</sys:String>
+    <sys:String x:Key="String.Launch.OpenFullLog">Open full log window</sys:String>
+    <sys:String x:Key="String.Core.Log.Install.MainClassRepair">Main class {0} is missing from every jar; marked {1} loader libraries for forced re-download</sys:String>
+    <sys:String x:Key="String.Core.Log.Install.JarInspectFailed">Could not read {0}: {1}</sys:String>
+    <sys:String x:Key="String.Core.Log.Launch.MainClassMissing">Main class {0} is not on the classpath ({1} jars, e.g. {2}); launch aborted</sys:String>
+    <sys:String x:Key="String.Core.Err.Launch.MainClassMissing">Loader files are incomplete: main class {0} not found. Use 'Complete game files' on the instance, or reinstall this loader version from the download center</sys:String>
 </ResourceDictionary>

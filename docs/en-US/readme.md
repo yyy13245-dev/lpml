@@ -57,7 +57,7 @@ This repository contains no game files, account credentials or binary releases. 
 - **Strings live in language packs**: `src/LPML.App/Locales/*.xaml`, zero hard-coded UI text
 - XAML uses `{DynamicResource String.Module.Item}`; C# uses `Lang.T` / `Lang.F`; Core uses `L.T` / `L.F`
 - **Switch at runtime**: Settings → Advanced → Language, applies instantly with no restart
-- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1424 entries each, keys 1:1
+- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1486 entries each, keys 1:1
 - Key format `String.<Module>.<Item>`, e.g. `String.Settings.Title`
 - To add a language: copy `zh-CN.xaml`, translate the values, add one entry to `LauncherLanguage`
 
@@ -84,6 +84,11 @@ This repository contains no game files, account credentials or binary releases. 
 
 ### Download Center
 - **Install game**: version list → double-click to open the install page (name, loader, folder, assets)
+- **Version channels**: Release / Snapshot (including pre-releases and release candidates) /
+  April Fools / Legacy / All. The list no longer truncates at 400 entries, so early snapshots and
+  joke builds remain searchable. April Fools builds are labelled `snapshot` in the official manifest
+  and are classified separately here. Test and joke builds are not guaranteed to launch, and loaders
+  may have no matching version; use a separate instance and folder
 - **Modpack import**: local `.mrpack` / zip, plus online Modrinth packs with version and loader picking
 - **Download mods**: search Modrinth and install into a chosen instance. Reachable from the Download
   Center tab and from any instance's Mods page; defaults to the instance selected on the home page,
@@ -213,7 +218,7 @@ src/
 │  ├─ Core/ Config/ Mirror/ Download/ Game/ Java/ Auth/ Launch/
 │  ├─ Instances/ Mods/ Integration/ Utils/
 └─ LPML.App/             # WPF UI (net10.0-windows)
-   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1424 entries each)
+   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1486 entries each)
    ├─ Views/             # 19 pages (incl. task center, version install, modpack install, mod download, docs)
    ├─ Windows/ Utils/ Services/ Themes/ Styles/ Helpers/ Controls/
 docs/                    # Built-in documents (zh-CN / en-US)
@@ -243,7 +248,7 @@ dotnet run --project src\LPML.App
 3. OptiFine's official installer is GUI-only; it's launched for you to click through
 4. CurseForge modpack mods must be added manually (`manifest.json` carries no URLs)
 5. "Check for updates" isn't wired to a release source yet
-6. BMCLAPI is occasionally flaky (403 / 429); switching happens automatically
+6. BMCLAPI is occasionally flaky (403 / 429); switching happens automatically. Third-party loader maven artifacts (Fabric / Forge / Quilt / NeoForge) now go to their dedicated mirrors or the official source instead of BMCLAPI's /maven
 
 ---
 

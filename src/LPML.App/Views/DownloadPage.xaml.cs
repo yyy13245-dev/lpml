@@ -86,7 +86,6 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
             return;
         }
 
-        VersionStatusText.Text = Lang.F("String.Download.VersionCount", _allVersions.Count);
         if (VersionList.Items.Count > 0 && VersionList.SelectedIndex < 0) VersionList.SelectedIndex = 0;
     }
 
@@ -98,21 +97,51 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
         IEnumerable<ManifestVersion> query = _allVersions;
         query = _currentType switch
         {
-            "release" => query.Where(v => v.Type == "release"),
-            "snapshot" => query.Where(v => !string.Equals(v.Type, "release", StringComparison.OrdinalIgnoreCase)),
+            "release" => query.Where(v => VersionClassifier.Classify(v) == VersionChannel.Release),
+            "snapshot" => query.Where(v => VersionClassifier.Classify(v) == VersionChannel.Snapshot),
+            "aprilfools" => query.Where(v => VersionClassifier.Classify(v) == VersionChannel.AprilFools),
+            "legacy" => query.Where(v => VersionClassifier.Classify(v) == VersionChannel.Legacy),
             _ => query
         };
         if (!string.IsNullOrWhiteSpace(_search))
             query = query.Where(v => v.Id.Contains(_search, StringComparison.OrdinalIgnoreCase));
-        VersionList.ItemsSource = query.Take(400).ToList();
+
+        // 官方清单已有 900 多条，早期快照与愚人节构建排在很后面；
+        // 不再截断成前 400 条，改为交给 ListBox 虚拟化，搜索也才能命中全部条目。
+        var rows = query.Select(v => new VersionRow(v)).ToList();
+        VersionList.ItemsSource = rows;
+        if (_allVersions.Count > 0)
+            VersionStatusText.Text = Lang.F("String.Download.FilteredVersionCount", _allVersions.Count, rows.Count);
+    }
+
+    /// <summary>按版本 ID 选中一行（切成「全部」再按 ID 搜，快照/愚人节也能命中）。</summary>
+    public ManifestVersion? SelectVersion(string versionId)
+    {
+        if (string.IsNullOrWhiteSpace(versionId)) return null;
+        if (VersionTypeCombo is not null) VersionTypeCombo.SelectedIndex = 4;
+        if (SearchBox is not null) SearchBox.Text = versionId;
+        _currentType = "all";
+        _search = versionId;
+        ApplyFilter();
+        if (VersionList is null) return null;
+        var row = VersionList.Items.OfType<VersionRow>().FirstOrDefault(r =>
+            string.Equals(r.Entry.Id, versionId, StringComparison.OrdinalIgnoreCase));
+        if (row is null) return null;
+        VersionList.SelectedItem = row;
+        VersionList.ScrollIntoView(row);
+        return row.Entry;
     }
 
     private void VersionTypeCombo_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // 初始化瞬间 SelectedIndex 可能是 -1，别把默认筛选从「正式版」冲成「全部」
+        if (VersionTypeCombo.SelectedIndex < 0) return;
         _currentType = VersionTypeCombo.SelectedIndex switch
         {
             0 => "release",
             1 => "snapshot",
+            2 => "aprilfools",
+            3 => "legacy",
             _ => "all"
         };
         ApplyFilter();
@@ -124,12 +153,22 @@ public partial class DownloadPage : UserControl, IRefreshablePage, IParameterize
         ApplyFilter();
     }
 
-    /// <summary>双击（或点"安装所选"旁的提示）进入版本安装页：在那里定名称和加载器。</summary>
+    /// <summary>双击进入版本安装页：在那里定名称和加载器。</summary>
     private void VersionList_OnDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (VersionList.SelectedItem is not ManifestVersion entry) return;
+        if (VersionList.SelectedItem is not VersionRow row) return;
         var window = Window.GetWindow(this) as MainWindow;
-        window?.NavigateToContent(new VersionInstallPage(window!, entry));
+        window?.NavigateToContent(new VersionInstallPage(window!, row.Entry));
+    }
+
+    /// <summary>列表行：类型列显示本地化分类名，但仍保留原始清单条目用于安装。</summary>
+    private sealed class VersionRow
+    {
+        public ManifestVersion Entry { get; }
+        public VersionRow(ManifestVersion entry) { Entry = entry; }
+        public string Id => Entry.Id;
+        public string ReleaseTime => Entry.ReleaseTime ?? "";
+        public string TypeText => Lang.T(VersionClassifier.ChannelKey(VersionClassifier.Classify(Entry)));
     }
 
     public async Task StartDownloadsAsync(List<DownloadItem> items, string title,

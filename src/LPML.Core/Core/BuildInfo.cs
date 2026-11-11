@@ -11,7 +11,7 @@ public static class BuildInfo
 {
     private static readonly Lazy<string> Cached = new(Read);
 
-    /// <summary>形如 0.0.001；带 SourceLink 时附带的 +commit 后缀会被去掉。</summary>
+    /// <summary>形如 0.0.002-1；预发布后缀保留，仅去掉 SourceLink 附带的 +commit 后缀。</summary>
     public static string Version => Cached.Value;
 
     private static string Read()

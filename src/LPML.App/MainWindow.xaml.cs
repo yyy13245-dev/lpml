@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using LPML.App.Services;
 using LPML.App.Windows;
 using LPML.Core;
@@ -64,6 +64,9 @@ public partial class MainWindow : Window
         RefreshAccount();
         Navigate("play");
         Context.Accounts.AccountsChanged += (_, _) => Dispatcher.Invoke(RefreshAccount);
+
+        // 在线更新：后台检查，不阻塞启动；失败只记日志
+        _ = UpdateCoordinator.CheckOnStartupAsync(this);
     }
 
     /// <summary>
@@ -248,6 +251,7 @@ public partial class MainWindow : Window
                     new() { Title = Lang.T("String.Nav.JavaMemory"), Icon = "☕", PageKey = "settings?tab=java" },
                     new() { Title = Lang.T("String.Nav.LaunchSettings"), Icon = "🚀", PageKey = "settings?tab=launch" },
                     new() { Title = Lang.T("String.Nav.Appearance"), Icon = "🎨", PageKey = "settings?tab=appearance" },
+                    new() { Title = Lang.T("String.Nav.Update"), Icon = "⬆", PageKey = "settings?tab=update" },
                     new() { Title = Lang.T("String.Nav.Advanced"), Icon = "🛠", PageKey = "settings?tab=advanced" },
                     new() { Title = Lang.T("String.Log.Title"), Icon = "📜", PageKey = "logs" },
                     new() { Title = Lang.T("String.About.Title"), Icon = "ℹ", PageKey = "about" }
@@ -742,6 +746,8 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // 必须更新：弹窗不允许关闭，主窗口也一样，否则能从旁边绕过去
+        if (Services.UpdateCoordinator.IsMandatoryPending) { e.Cancel = true; return; }
         if (!CanNavigateAway()) e.Cancel = true;
     }
 }

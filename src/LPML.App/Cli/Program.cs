@@ -59,6 +59,19 @@ public static class Program
         if (args.Any(a => a.Equals("--guard", StringComparison.OrdinalIgnoreCase)))
             return GuardProcess.Run(args);
 
+        // 自更新接力：必须在创建 WPF Application、挂日志、启动守护进程之前处理。
+        // 暂存程序会返回 true 并自行结束；最终程序带 cleanup 参数时返回 false 继续正常启动。
+        if (UpdateStaging.TryHandle(args)) return 0;
+
+        // 更新后的第一次启动：把已应用的 num / id 写回配置（旧程序也会写一次，双保险）
+        var appliedNum = args.FirstOrDefault(a => a.StartsWith("--lpml-update-num=", StringComparison.OrdinalIgnoreCase));
+        if (appliedNum is not null
+            && int.TryParse(appliedNum["--lpml-update-num=".Length..], out var updateNum))
+            App.PendingUpdateNum = updateNum;
+        var appliedId = args.FirstOrDefault(a => a.StartsWith("--lpml-update-id=", StringComparison.OrdinalIgnoreCase));
+        if (appliedId is not null)
+            App.PendingUpdateId = appliedId["--lpml-update-id=".Length..];
+
         // 先挂本地日志并打印版本号，再尽早启动守护进程。
         // 守护进程还没起来的这段日志由主进程自己记录，一条不丢；
         // --no-guard 时也不会只留在内存缓冲里而没落盘。
@@ -152,6 +165,7 @@ public static class Program
                         && !StandardSwitches.Contains(a, StringComparer.OrdinalIgnoreCase)
                         && !GuardOptions.DisableSwitches.Contains(a, StringComparer.OrdinalIgnoreCase)
                         && !a.Equals("--guard-auto-kill", StringComparison.OrdinalIgnoreCase)
+                        && !a.StartsWith("--lpml-update-", StringComparison.OrdinalIgnoreCase)
                         && !GuardPrefixes.Any(p => a.StartsWith(p, StringComparison.OrdinalIgnoreCase))).ToArray();
 
     // ── 控制台分配与编码 ───────────────────────────────────

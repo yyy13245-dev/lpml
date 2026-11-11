@@ -23,6 +23,10 @@ public partial class App : Application
     /// </summary>
     public static PerformanceMode? PendingPerformanceMode { get; set; }
 
+    /// <summary>自更新完成后的第一次启动，由命令行传入已应用的 num / id。</summary>
+    public static int? PendingUpdateNum { get; set; }
+    public static string? PendingUpdateId { get; set; }
+
     public static ThemeService Theme { get; private set; } = null!;
 
     /// <summary>界面语言服务（词条加载与运行时切换）。</summary>
@@ -152,6 +156,16 @@ public partial class App : Application
 
         Context = new LauncherContext();
         Context.Initialize();
+
+        // 更新后的第一次启动：记下当前 num，避免同一个更新反复提示
+        if (PendingUpdateNum is { } appliedNum)
+        {
+            Context.Settings.Update.CurrentNum = Math.Max(Context.Settings.Update.CurrentNum, appliedNum);
+            if (!string.IsNullOrWhiteSpace(PendingUpdateId))
+                Context.Settings.Update.CurrentId = PendingUpdateId!;
+            Context.Save();
+            Log.Info("Update", $"更新已应用：num={appliedNum} id={PendingUpdateId ?? "-"}");
+        }
 
         // 设置文件读出来后，按用户选择的语言再挂一次
         Language.Apply(Context.Settings.Language);

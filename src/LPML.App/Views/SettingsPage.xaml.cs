@@ -12,6 +12,7 @@ using System.Windows.Media;
 using ThemeMode = LPML.Core.Config.ThemeMode;
 using LPML.Core.Java;
 using LPML.Core.Download;
+using LPML.Core.Update;
 using LPML.App.Windows;
 
 namespace LPML.App.Views;
@@ -240,7 +241,24 @@ public partial class SettingsPage : UserControl, IParameterizedPage, IRefreshabl
         GuardTimeoutBox.Text = s.Advanced.GuardTimeoutSeconds.ToString();
         GuardAutoKillCheck.IsChecked = s.Advanced.GuardAutoKill;
 
+        UpdateEnableCheck.IsChecked = s.Update.Enabled;
+        UpdateMuteOptionalCheck.IsChecked = s.Update.MuteOptional;
+        UpdateLineCombo.SelectedIndex = Math.Clamp(s.Update.DownloadLine, 0, 2);
+        UpdatePackageCombo.SelectedIndex = Math.Clamp(s.Update.PackageKind, 0, 2);
+        UpdateSignatureBox.Text = s.Update.SignatureFileName;
+        UpdateStatusText.Text = Lang.F("String.Msg.Settings.UpdateStatus", s.Update.CurrentNum,
+            string.IsNullOrWhiteSpace(s.Update.CurrentId) ? LPML.Core.BuildInfo.Version : s.Update.CurrentId);
+        UpdateRuntimeHint();
+
         _loaded = true;
+    }
+
+    /// <summary>显示当前安装是否自带 .NET 运行时，自动模式据此选包。</summary>
+    private void UpdateRuntimeHint()
+    {
+        var bundled = UpdateRuntimeDetector.HasBundledRuntime();
+        var current = Lang.T(bundled ? "String.Update.RuntimeWith" : "String.Update.RuntimeWithout");
+        UpdateRuntimeText.Text = Lang.F("String.Settings.UpdateRuntimeDetected", current);
     }
 
     /// <summary>
@@ -368,6 +386,14 @@ public partial class SettingsPage : UserControl, IParameterizedPage, IRefreshabl
         Context.Save();
         Refresh();
         Notice.Info(Lang.T("String.Msg.Settings.FastApplied"));
+    }
+
+    /// <summary>手动检查更新：不受「启动时检查」与「屏蔽可选更新」限制。</summary>
+    private async void CheckUpdate_OnClick(object sender, RoutedEventArgs e)
+    {
+        var owner = Window.GetWindow(this);
+        if (owner is null) return;
+        await UpdateCoordinator.CheckManuallyAsync(owner).ConfigureAwait(true);
     }
 
     /// <summary>切换全局隔离模式：改设置本身，不搬运已有文件（搬运要点下面的按钮）。</summary>
@@ -523,6 +549,14 @@ public partial class SettingsPage : UserControl, IParameterizedPage, IRefreshabl
         s.Advanced.EnableGuardProcess = GuardEnableCheck.IsChecked == true;
         s.Advanced.GuardTimeoutSeconds = Math.Clamp(Int(GuardTimeoutBox, 20), 5, 300);
         s.Advanced.GuardAutoKill = GuardAutoKillCheck.IsChecked == true;
+
+        s.Update.Enabled = UpdateEnableCheck.IsChecked == true;
+        s.Update.MuteOptional = UpdateMuteOptionalCheck.IsChecked == true;
+        s.Update.DownloadLine = Math.Clamp(UpdateLineCombo.SelectedIndex, 0, 2);
+        s.Update.PackageKind = Math.Clamp(UpdatePackageCombo.SelectedIndex, 0, 2);
+        s.Update.SignatureFileName = UpdateSignatureBox.Text.Trim();
+        UpdateStatusText.Text = Lang.F("String.Msg.Settings.UpdateStatus", s.Update.CurrentNum,
+            string.IsNullOrWhiteSpace(s.Update.CurrentId) ? LPML.Core.BuildInfo.Version : s.Update.CurrentId);
 
         Context.ApplySettings();
         Context.Save();

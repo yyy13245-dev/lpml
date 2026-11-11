@@ -252,7 +252,7 @@ public sealed class DownloadSettings
     public bool CleanChunkFiles { get; set; } = true;
 
     /// <summary>HTTP 用户代理，部分镜像对 UA 有要求。</summary>
-    public string UserAgent { get; set; } = "LPML/0.0.001";
+    public string UserAgent { get; set; } = "LPML/" + LPML.Core.BuildInfo.Version;
 
     /// <summary>代理设置，留空则跟随系统。</summary>
     public bool UseProxy { get; set; } = false;
@@ -528,6 +528,32 @@ public sealed class AccountSettings
     public bool AutoOpenBrowser { get; set; } = true;
 }
 
+/// <summary>在线更新设置（全部只存本地 launcher.json，不上传任何数据）。</summary>
+public sealed class UpdateSettings
+{
+    /// <summary>在线更新总开关；关闭后启动时不检查，手动检查会提示已关闭。</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>自动检查时忽略 important=3 的可选更新；手动检查不受影响。</summary>
+    public bool MuteOptional { get; set; } = false;
+
+    /// <summary>启动器记录的当前更新序号；只有清单 num 严格更大才认为有更新。</summary>
+    /// <remarks>本发行版 0.0.002-1 对应 num=2；全新安装从此值起步，已有配置沿用其已记录值。</remarks>
+    public int CurrentNum { get; set; } = 2;
+
+    /// <summary>当前已应用的更新 id，仅用于设置页展示。</summary>
+    public string CurrentId { get; set; } = "";
+
+    /// <summary>下载线路：0 自动（清单顺序）/ 1 GitHub 直连优先 / 2 代理线路优先。</summary>
+    public int DownloadLine { get; set; } = 0;
+
+    /// <summary>更新包类型：0 自动（跟随当前安装是否自带 .NET 运行时）/ 1 带运行时 / 2 不带运行时。</summary>
+    public int PackageKind { get; set; } = 0;
+
+    /// <summary>服务端签名文件名；留空时自动探测常见命名。</summary>
+    public string SignatureFileName { get; set; } = "";
+}
+
 public sealed class LauncherSettings
 {
     public int SchemaVersion { get; set; } = 1;
@@ -561,6 +587,7 @@ public sealed class LauncherSettings
     public AppearanceSettings Appearance { get; set; } = new();
     public PrivacySettings Privacy { get; set; } = new();
     public AdvancedSettings Advanced { get; set; } = new();
+    public UpdateSettings Update { get; set; } = new();
 
     [JsonIgnore]
     public bool IsFirstRun { get; set; }

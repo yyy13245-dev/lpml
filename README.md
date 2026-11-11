@@ -23,7 +23,7 @@
 
 ## ⚡ 快速开始
 
-1. 从本仓库的 Releases 页面下载发布包；若暂未提供，请按下方命令从源码编译。
+1. 从本仓库的 Releases 页面下载发布包；若暂未提供，请按下方命令从源码编译。装好后可在「设置 → 在线更新」里手动检查新版本，不必重新下载整包。
 2. 解压到任意文件夹，双击 `LPML.exe`。**首次启动会显示《用户协议与免责声明》**，阅读并同意后进入主界面。
 3. 在「下载 → 安装游戏」选择版本，装好后在「开始游戏」页选择实例并启动。
 
@@ -55,7 +55,7 @@
 - **语言包分离**：全部界面文本放在 `src/LPML.App/Locales/*.xaml`（ResourceDictionary），代码里**零硬编码文案**
 - **引用方式**：XAML 用 `{DynamicResource String.模块.项}`，C# 用 `Lang.T("...")` / `Lang.F("...", args)`，Core 层用 `L.T` / `L.F`
 - **运行时切换**：设置 → 高级 → 界面语言，换语言包后界面**立即刷新**，无需重启（导航树等代码生成的部分自动重建）
-- **内置语言**：简体中文（zh-CN）、English（en-US），各 **1486 条**词条，键名一一对应
+- **内置语言**：简体中文（zh-CN）、English（en-US），各 **1530 条**词条，键名一一对应
 - 键名规范 `String.<模块>.<项>`，例如：
   - `String.Settings.Title`、`String.Account.LoginSuccess`、`String.Msg.Download.Installing`
 - 新增语言只需复制一份 `Locales/zh-CN.xaml` → 改文件名与值 → 在 `LauncherLanguage` 加一档
@@ -268,7 +268,7 @@ LPML.exe --cli [选项]
 下载 ── 安装游戏 / 整合包导入 / 下载模组
 模组
 账户 ── 微软登录 / 离线 / 外置登录 / LittleSkin
-设置 ── 下载源 / 下载设置 / 临时文件 / 目录与路径 / Java 与内存 / 启动设置 / 外观 / 高级
+设置 ── 下载源 / 下载设置 / 临时文件 / 目录与路径 / Java 与内存 / 启动设置 / 外观 / 高级 / 在线更新
 说明 / 日志 / 关于
 ```
 
@@ -432,9 +432,9 @@ repo.mumfrey.com         → liteloader.fastmcmirror.org
     └─ LPML\                       # 运行时生成 · 启动器自身的数据
         ├─ config\                 # launcher.json / instances.json / folders.json / library-index.json
         ├─ accounts\               # accounts.json（默认位置，可切到本机用户目录）
-        ├─ cache\                  # 分片 temp、安装器、整合包
+        ├─ cache\                  # 分片 temp、安装器、整合包、更新暂存（update-*）
         ├─ backgrounds\            # 自定义背景图
-        └─ logs\                   # lpml.log + oldlog1~5.zip（启动时自动归档，最多 5 份）
+        └─ logs\                   # lpml.log + oldlog1~5.zip（启动时自动归档，最多 5 份）+ update.log
   ```
 - 即：**发布文件在根目录，运行产生的数据在 `LPML\`，游戏数据在 `.minecraft\`（PCL / HMCL 通用格式）**
 - 升级时若检测到旧版散落在根目录的 `config` / `logs` / `cache`，会自动迁移到 `LPML\` 下
@@ -445,6 +445,42 @@ repo.mumfrey.com         → liteloader.fastmcmirror.org
 - **TEMP 三档策略**：从不写入（默认） / 仅小文件 / 全部写入；可设 TEMP 总量上限、单文件上限，退出自动清理
 - 游戏目录与其他启动器通用格式互通，可选写入 `launcher_profiles.json`
 - 无任何遥测
+
+### 在线更新
+
+启动器按 `https://lpml.pages.dev/api/v1/lpml/` 拉取 `update.json` 与签名，**全部走 HTTPS**：
+
+- 清单必须用内置的 **Ed25519 公钥验签**通过；整包还要与清单里的 **SHA-256** 一致。任何一步不过都不应用更新，也不替换任何文件。
+- 只认 **`num` 严格大于本地已记录序号**的清单；更新完成后把新的 `num` / `id` 写回本地配置，不上传任何数据。
+- `important`：`1` 必须更新（弹窗不能关，Esc / Alt+F4 也不放行）、`2` 重要更新、`3` 可选更新。设置里可屏蔽自动检查时的可选更新，手动检查仍能看到全部。
+- 清单里两条下载地址都会尝试；弹窗里可选排序：自动按清单顺序 / GitHub 直连优先 / 代理线路优先，选中的先试、另一条作失败兜底。
+- 更新包分**带 .NET 运行时**与**不带运行时**两种；默认按当前安装是否自带运行时自动匹配，也可在设置或弹窗里手动切换。手动切到不带运行时前，请确认目标机器装有 .NET 10。
+- 中英文更新说明各指向一个 JSON，取其 `main` 字段作 Markdown 正文显示；说明拉取失败只影响展示，不阻断安全更新。
+- 应用时：整包解压到 `LPML\cache\update-*` → 拉起暂存程序 → 替换根目录下的程序文件并启动新启动器 → 删除暂存目录。全程不碰 `LPML\` 里的配置、账户、日志与 `.minecraft\` 游戏数据；替换过程另记在 `LPML\logs\update.log`，失败按备份回滚。
+- **设置 → 在线更新**：总开关、立即检查、屏蔽可选更新、下载线路、更新包类型、签名文件名，并显示当前更新序号与已应用版本；「启动时检查更新」在**设置 → 高级**。检查失败只提示，不阻止启动器继续使用。
+- 验签只保证清单在传输中未被篡改，**不是运行授权**：程序本体不带签名，关闭更新或换掉端点后照常运行；强制更新只由 `num` 触发，不检测程序是否被修改。
+
+#### 发布清单格式与自建更新源
+
+`update.json` 用 snake_case，完整定义见 `src/LPML.Core/Update/UpdateModels.cs`：
+
+| 字段 | 含义 |
+|---|---|
+| `name` / `id` | 更新名称与版本标识（`id` 必填） |
+| `num` | 更新总顺序，正整数且严格递增 |
+| `have` | `false` 表示服务端暂停推送 |
+| `important` | 1 必须 / 2 重要 / 3 可选 |
+| `have_runtime_down` / `have_runtime_sha256` | 带运行时整包的地址数组（两条线路）与 SHA-256 |
+| `no_runtime_down` / `no_runtime_sha256` | 不带运行时整包的地址数组与 SHA-256 |
+| `update_name_zh` / `update_name_en` | 中英文标题 |
+| `update_introduce_zh` / `update_introduce_en` | 中英文说明 JSON 的相对路径，文件内 `main` 为 Markdown 正文 |
+| `github` | 可选，HTTPS 发布页 |
+
+签名是**对 `update.json` 原始字节的 Ed25519 签名**，与清单放在同一目录；默认探测 `update.json.sig` 等常见文件名，也可在设置里指定。支持裸 64 字节、base64 / hex 文本、PEM 块或 `{"signature":"..."}` 形式；公钥为 SPKI PEM（RFC 8410），代码里另存一份对应的裸 32 字节常量。
+
+自建更新源：① 用任意 Ed25519 工具生成密钥对，对 `update.json` 原始字节签名，把清单与签名放到自己的 HTTPS 端点；② 把 `src/LPML.Core/Update/UpdateService.cs` 里的 `BaseUrl`、`PublicKeyPem`、`PublicKeyRaw` 换成自己的端点与公钥（三者对应同一把密钥）；③ 按上表写清单。修改后的版本可以走完整更新流程，并不因被修改而被阻止；官方源只向官方二进制提供更新，不为修改版提供分发、支持或更新。请勿在协议、商标或服务条款中对「修改公钥 / 修改更新地址」另加限制——那会与 GPLv3 授予的修改权冲突。
+
+> 每个二进制发布包都配一份同版本源码包，见下文「对应源码」。
 
 ### 日志守护进程（子进程）
 主进程启动后会用 `Process.Start` 再拉起**同一个 exe 的 `--guard` 实例**。因为是由主进程直接创建的子进程，
@@ -491,7 +527,7 @@ Windows 任务管理器的「进程」页会把两个 LPML 折叠在**同一组*
 > **不随源码仓库分发**；如需自行分发，请遵守 Terracotta 与 EasyTier 各自的许可证。
 
 ### 其他
-- **i18n**：1486 条词条分离到 `Locales/zh-CN.xaml` 与 `Locales/en-US.xaml`，支持运行时切换
+- **i18n**：1530 条词条分离到 `Locales/zh-CN.xaml` 与 `Locales/en-US.xaml`，支持运行时切换
 - **实例隔离**：独立 mods / saves / config；两种隔离模式可切换与互相迁移，实例单独覆盖
 - 实例级覆盖：内存、Java 路径、JVM 参数、窗口尺寸、全屏、服务器直连
 - 模组管理：读取 fabric.mod.json / mods.toml / mcmod.info 元信息，一键启停（`.jar.disabled`）、删除、添加
@@ -519,7 +555,7 @@ src/
 │  ├─ Instances/ Mods/ Integration/
 │  └─ Utils/             # JSON / Hash / File / ObservableObject
 └─ LPML.App/             # WPF 界面（net10.0-windows）
-   ├─ Locales/           # ★ 语言包：zh-CN.xaml / en-US.xaml（各 1486 条）
+   ├─ Locales/           # ★ 语言包：zh-CN.xaml / en-US.xaml（各 1530 条）
    ├─ Guard/             # 日志守护进程：进程入口、命名管道协议、看门狗
    ├─ Services/          # LanguageService（运行时切换语言包）
    ├─ Themes/ Styles/    # 主题画刷与控件样式（含动效）
@@ -607,7 +643,7 @@ LPML **不内置、不分发、不代管任何 Client ID**。启动器只提供�
 1. **微软登录**需要你自己在 Azure 注册应用（勾选「允许公共客户端流」）并填写 Client ID —— **不使用他人 Client ID**，详见上一节。
 2. **Forge / NeoForge** 安装通过官方 installer jar + Java 静默安装（`--installClient`），因此需要先有可用 Java。
 3. **OptiFine** 官方安装器只有图形界面，启动器会下载并唤起它，由你点下一步完成。
-4. 「检查更新」目前仅保留开关，未接入发行源。
+4. **在线更新**依赖 `https://lpml.pages.dev/api/v1/lpml/` 可访问；清单未通过 Ed25519 验签、或整包 SHA-256 不符时不会应用任何更新。重要级别 1 的更新必须完成后才能继续使用。更新包默认按当前安装是否自带 .NET 运行时选择，可在设置或更新弹窗里手动切换。
 5. Quilt 的镜像端地址沿用 Fabric Meta 兼容路径，若镜像未同步会回退官方源。
 6. **BMCLAPI 偶尔不稳定**（403 / 429），遇到时会自动换源重试，不必手动干预；持续有问题可在设置里把默认源换成光速镜像或官方。
 7. **本地库复用**的索引文件没有大小上限，装很多版本后会缓慢增长（索引本身很小，扫描靠大小+修改时间跳过未变动文件）。

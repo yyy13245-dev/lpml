@@ -25,7 +25,8 @@ public sealed partial class CliRunner
         "language", "theme", "perf", "mirror", "smallconcurrency", "largeconcurrency",
         "retries", "autoretry", "autoretryrounds", "autoretrydelay", "timeout", "speedlimit",
         "verifysha1", "loglevel", "title",
-        "guard", "guardtimeout", "autodownloadjava", "autodownloadmissing", "afterlaunch"
+        "guard", "guardtimeout", "autodownloadjava", "autodownloadmissing", "afterlaunch",
+        "update", "updateoptional", "updateline", "updatepackage", "updatenum"
     };
 
     // ── 参数小工具 ────────────────────────────────────────
@@ -701,6 +702,11 @@ public sealed partial class CliRunner
             "autodownloadjava" => s.Java.AutoDownloadJavaRuntime.ToString(),
             "autodownloadmissing" => s.Launch.AutoDownloadMissingFiles.ToString(),
             "afterlaunch" => s.Launch.AfterLaunch.ToString(),
+            "update" => s.Update.Enabled.ToString(),
+            "updateoptional" => s.Update.MuteOptional.ToString(),
+            "updateline" => s.Update.DownloadLine.ToString(CultureInfo.InvariantCulture),
+            "updatepackage" => s.Update.PackageKind.ToString(CultureInfo.InvariantCulture),
+            "updatenum" => s.Update.CurrentNum.ToString(CultureInfo.InvariantCulture),
             _ => null
         };
     }
@@ -751,6 +757,11 @@ public sealed partial class CliRunner
                 ok = Enum.TryParse<AfterLaunchAction>(value, true, out var after) && Enum.IsDefined(after);
                 if (ok) s.Launch.AfterLaunch = after;
                 break;
+            case "update": ok = bool.TryParse(value, out var updateEnabled); if (ok) s.Update.Enabled = updateEnabled; break;
+            case "updateoptional": ok = bool.TryParse(value, out var muteOptional); if (ok) s.Update.MuteOptional = muteOptional; break;
+            case "updateline": ok = TryInt(value, out var updateLine); if (ok) s.Update.DownloadLine = Math.Clamp(updateLine, 0, 2); break;
+            case "updatepackage": ok = TryInt(value, out var updatePackage); if (ok) s.Update.PackageKind = Math.Clamp(updatePackage, 0, 2); break;
+            case "updatenum": ok = TryInt(value, out var updateNum); if (ok) s.Update.CurrentNum = Math.Max(0, updateNum); break;
             default: ok = false; break;
         }
 

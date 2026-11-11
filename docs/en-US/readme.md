@@ -28,7 +28,7 @@ size-adaptive concurrency, and switchable download sources across
 
 ## ⚡ Quick Start
 
-1. Download a release archive from this repository's Releases page; if none is available yet, build from source with the commands below.
+1. Download a release archive from this repository's Releases page; if none is available yet, build from source with the commands below. Afterwards, **Settings → Online Update** can check for newer builds so you don't need to re-download the whole package.
 2. Extract it to any folder and run `LPML.exe`. **On first launch a User Agreement and Disclaimer is shown**; read it and agree to continue (GUI: click **Agree and Continue**; CLI: type `是` / `我同意` / `同意` / `yes`).
 3. Install a version from **Download → Install Game**, then pick the instance on the **Play** page and launch.
 
@@ -57,7 +57,7 @@ This repository contains no game files, account credentials or binary releases. 
 - **Strings live in language packs**: `src/LPML.App/Locales/*.xaml`, zero hard-coded UI text
 - XAML uses `{DynamicResource String.Module.Item}`; C# uses `Lang.T` / `Lang.F`; Core uses `L.T` / `L.F`
 - **Switch at runtime**: Settings → Advanced → Language, applies instantly with no restart
-- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1486 entries each, keys 1:1
+- **Bundled**: Simplified Chinese (zh-CN) and English (en-US), 1530 entries each, keys 1:1
 - Key format `String.<Module>.<Item>`, e.g. `String.Settings.Title`
 - To add a language: copy `zh-CN.xaml`, translate the values, add one entry to `LauncherLanguage`
 
@@ -170,6 +170,30 @@ Each instance directory gets an **`lpml.json`** (name / version / loader / isola
 Settings → Documents — a two-level "list → content" view with **Chinese and English** versions:
 User Guide, Project README, and Markdown syntax notes.
 
+### Online Updates
+
+The launcher fetches `update.json` and its signature from `https://lpml.pages.dev/api/v1/lpml/` over **HTTPS only**:
+
+- The manifest must pass **Ed25519** verification with the built-in public key, and the package must match the **SHA-256** in the manifest; otherwise nothing is applied.
+- Only a strictly higher `num` than the locally stored one counts as an update. The new `num` / `id` are saved locally; nothing is uploaded.
+- `important`: `1` required (the dialog cannot be closed, Esc / Alt+F4 blocked), `2` important, `3` optional. Automatic checks can hide optional updates; a manual check still shows them.
+- Both URLs in the manifest are tried. The dialog picks their order: manifest order (auto), GitHub direct first, or proxy first; the preferred one goes first and the other stays as a fallback.
+- Packages come **with or without the .NET runtime**. By default the type follows the current install (detected from the program files); it can be overridden in Settings or the dialog. Switching to "without runtime" requires .NET 10 on the machine.
+- Localised release notes point to JSON files whose `main` field holds Markdown; a missing note does not block a safe update.
+- Applying: extract to `LPML\cache\update-*` → start the staged build → it replaces the program files and launches the new launcher → the staged copy is removed. Config, accounts, logs and `.minecraft\` game data are untouched; the replacement is logged to `LPML\logs\update.log` and rolls back from a backup on failure.
+- **Settings → Online Update** holds the master switch, check-now, optional-update muting, route, package type, signature file name, and shows the current update number; "Check for updates on startup" is under Advanced. A failed check never blocks the launcher.
+- Verification protects the manifest in transit only — it is **not a runtime authorisation**. The program itself is unsigned; turning updates off or changing the endpoint does not stop it running, and a required update is triggered by `num`, never by detecting a modified build.
+
+#### Manifest format and self-hosting
+
+`update.json` uses snake_case (full definition: `src/LPML.Core/Update/UpdateModels.cs`): `name` / `id` (required), `num` (positive, strictly increasing), `have` (`false` pauses delivery), `important` (1/2/3), `have_runtime_down` + `have_runtime_sha256` and `no_runtime_down` + `no_runtime_sha256` (arrays of two HTTPS package URLs and the matching hash), `update_name_zh` / `update_name_en`, `update_introduce_zh` / `update_introduce_en` (relative paths to JSON files whose `main` is Markdown), and an optional HTTPS `github` release page.
+
+The signature is an **Ed25519 signature over the raw bytes of `update.json`**, placed beside it; common names such as `update.json.sig` are probed automatically, or set one in Settings. Raw 64-byte, base64 / hex text, PEM blocks and `{"signature":"..."}` are accepted; the public key is SPKI PEM (RFC 8410), with the corresponding raw 32-byte constant alongside it.
+
+To host your own feed: generate an Ed25519 key pair, sign the raw manifest bytes, publish manifest + signature over HTTPS, then replace `BaseUrl`, `PublicKeyPem` and `PublicKeyRaw` in `src/LPML.Core/Update/UpdateService.cs` with your endpoint and key (all three must match the same key). A modified build runs the full update flow and is not blocked because it was modified; the official feed serves official binaries only. Do not add terms forbidding changes to the public key or update URL — that would conflict with the rights GPLv3 grants.
+
+> Every binary release is paired with a same-version source release; see "Corresponding source" below.
+
 ### Log Guard Process (child process)
 On startup the launcher spawns a second `--guard` instance of the same exe with `Process.Start`.
 Because it is a direct child, Windows Task Manager groups both LPML entries together.
@@ -218,7 +242,7 @@ src/
 │  ├─ Core/ Config/ Mirror/ Download/ Game/ Java/ Auth/ Launch/
 │  ├─ Instances/ Mods/ Integration/ Utils/
 └─ LPML.App/             # WPF UI (net10.0-windows)
-   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1486 entries each)
+   ├─ Locales/           # Language packs: zh-CN.xaml / en-US.xaml (1530 entries each)
    ├─ Views/             # 19 pages (incl. task center, version install, modpack install, mod download, docs)
    ├─ Windows/ Utils/ Services/ Themes/ Styles/ Helpers/ Controls/
 docs/                    # Built-in documents (zh-CN / en-US)
@@ -247,7 +271,7 @@ dotnet run --project src\LPML.App
 2. Forge / NeoForge install via the official installer, so a working Java is required
 3. OptiFine's official installer is GUI-only; it's launched for you to click through
 4. CurseForge modpack mods must be added manually (`manifest.json` carries no URLs)
-5. "Check for updates" isn't wired to a release source yet
+5. Online updates require `https://lpml.pages.dev/api/v1/lpml/` to be reachable; an unverified manifest or a SHA-256 mismatch aborts the update. A level-1 update must be applied before continuing. The package type follows the current install (bundled .NET runtime or not) by default and can be switched in Settings or the update dialog.
 6. BMCLAPI is occasionally flaky (403 / 429); switching happens automatically. Third-party loader maven artifacts (Fabric / Forge / Quilt / NeoForge) now go to their dedicated mirrors or the official source instead of BMCLAPI's /maven
 
 ---

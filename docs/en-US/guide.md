@@ -235,7 +235,14 @@ Game directory, cache directory, isolation mode and migration.
 - Theme (dark / light / system), accent colour, animation toggle
 
 ### Advanced
-Interface language (applies instantly, no restart), log level, TEMP policy.
+Interface language (applies instantly, no restart), log level, TEMP policy, and the "Check for updates on startup" switch.
+
+### Online Update
+- **Settings → Online Update**: master switch, check now, hide optional updates on automatic checks, route order (both manifest URLs are tried; auto / GitHub direct first / proxy first), update package (automatic / with .NET runtime / without runtime), signature file name, plus the current update number and applied version.
+- Manifest and packages are fetched over HTTPS: the manifest must pass Ed25519 verification and the package must match its SHA-256; otherwise nothing is applied.
+- Only a strictly higher update number (`num`) triggers a prompt; `important=1` is required (the window cannot be closed), `2` important, `3` optional.
+- After you confirm, the package is downloaded to `LPML\cache\update-*`, the launcher restarts and replaces its own program files. Config, accounts, logs and `.minecraft\` game data are untouched; the replacement is logged to `LPML\logs\update.log`.
+- A failed check only shows a hint and never blocks the launcher. Turn off the master switch, or disable "Check for updates on startup" under Advanced, to stop checking.
 
 ---
 
@@ -281,9 +288,9 @@ so it can be copied or redirected. When output is redirected, the interactive UI
   └─ LPML\                    # Launcher's own data
       ├─ config\              # Settings, instances, folders, library index
       ├─ accounts\            # Accounts (default location)
-      ├─ cache\               # Chunk temp files, installers
+      ├─ cache\               # Chunk temp files, installers, staged updates (update-*)
       ├─ backgrounds\         # Custom background image
-      └─ logs\                # lpml.log + oldlog1~5.zip
+      └─ logs\                # lpml.log + oldlog1~5.zip + update.log
 ```
 
 **Logs**: if `lpml.log` has content at startup it's packed into `oldlog1.zip` and older archives shift
@@ -320,6 +327,9 @@ The guard writes `LPML\logs\lpml.log`, and if the UI freezes past the threshold 
 force-close the launcher. It exits by itself when the launcher closes — nothing is left running.
 To disable it: **Settings → Advanced → Enable log guard process** (takes effect after restart).
 
+**Q: How do I turn off online updates / only see required ones?**
+**Settings → Online Update** has the master switch, Check now, and "Hide optional updates on automatic checks"; to disable just the startup check, turn off "Check for updates on startup" under Advanced. A failed signature or SHA-256 check replaces nothing; a required (`important=1`) dialog cannot be closed, so you either apply the update or exit the launcher.
+
 ---
 
 ## 11. Known Limitations
@@ -328,7 +338,7 @@ To disable it: **Settings → Advanced → Enable log guard process** (takes eff
 2. Forge / NeoForge install via the official installer, so a working Java is required
 3. OptiFine's official installer is GUI-only; it's launched for you to click through
 4. CurseForge modpack mods must be added manually (`manifest.json` has no URLs)
-5. "Check for updates" isn't wired to a release source yet
+5. Online updates require `https://lpml.pages.dev/api/v1/lpml/` to be reachable; a failed signature check or SHA-256 mismatch aborts the update. A required (`important=1`) update must be applied before continuing, and the whole check can be turned off under Settings → Online Update
 6. Guard settings (enable / threshold / auto-close) take effect **after a restart**
 7. Running several launchers at once shares one `lpml.log`, so their entries get mixed
 

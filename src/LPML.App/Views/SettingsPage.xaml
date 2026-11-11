@@ -1,4 +1,4 @@
-<UserControl x:Class="LPML.App.Views.SettingsPage"
+﻿<UserControl x:Class="LPML.App.Views.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              FontFamily="{DynamicResource Font.Ui}">
@@ -634,6 +634,50 @@
                 </StackPanel>
             </Expander>
 
+            <!-- 在线更新 -->
+            <Expander Header="{DynamicResource String.Settings.GroupUpdate}" Style="{StaticResource SettingsGroup}" Tag="update">
+                <StackPanel>
+                    <TextBlock x:Name="UpdateStatusText" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <CheckBox x:Name="UpdateEnableCheck" Style="{StaticResource Switch}"
+                              Content="{DynamicResource String.Settings.UpdateEnable}"
+                              Checked="Setting_OnChanged" Unchecked="Setting_OnChanged"/>
+                    <CheckBox x:Name="UpdateMuteOptionalCheck" Style="{StaticResource Switch}" Margin="0,10,0,0"
+                              Content="{DynamicResource String.Settings.UpdateMuteOptional}"
+                              Checked="Setting_OnChanged" Unchecked="Setting_OnChanged"/>
+                    <TextBlock Text="{DynamicResource String.Settings.UpdateMuteOptionalHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,4,0,0" FontSize="10.5"/>
+
+                    <TextBlock Text="{DynamicResource String.Update.LineLabel}" Style="{StaticResource Text.Caption}" Margin="0,16,0,6"/>
+                    <ComboBox x:Name="UpdateLineCombo" SelectionChanged="Setting_OnChanged" HorizontalAlignment="Left" Width="300">
+                        <ComboBoxItem Content="{DynamicResource String.Update.LineAuto}"/>
+                        <ComboBoxItem Content="{DynamicResource String.Update.LineDirect}"/>
+                        <ComboBoxItem Content="{DynamicResource String.Update.LineProxy}"/>
+                    </ComboBox>
+                    <TextBlock Text="{DynamicResource String.Settings.UpdateLineHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,4,0,0" FontSize="10.5"/>
+
+                    <TextBlock Text="{DynamicResource String.Settings.UpdatePackage}" Style="{StaticResource Text.Caption}" Margin="0,14,0,6"/>
+                    <ComboBox x:Name="UpdatePackageCombo" SelectionChanged="Setting_OnChanged" HorizontalAlignment="Left" Width="300">
+                        <ComboBoxItem Content="{DynamicResource String.Settings.UpdatePackageAuto}"/>
+                        <ComboBoxItem Content="{DynamicResource String.Settings.UpdatePackageRuntime}"/>
+                        <ComboBoxItem Content="{DynamicResource String.Settings.UpdatePackageNoRuntime}"/>
+                    </ComboBox>
+                    <TextBlock x:Name="UpdateRuntimeText" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,4,0,0" FontSize="10.5"/>
+
+                    <TextBlock Text="{DynamicResource String.Settings.UpdateSignature}" Style="{StaticResource Text.Caption}" Margin="0,14,0,6"/>
+                    <TextBox x:Name="UpdateSignatureBox" LostFocus="Setting_OnChanged" Width="300" HorizontalAlignment="Left"/>
+                    <TextBlock Text="{DynamicResource String.Settings.UpdateSignatureHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,4,0,0" FontSize="10.5"/>
+
+                    <TextBlock Text="{DynamicResource String.Settings.UpdateHint}" Style="{StaticResource Text.Caption}"
+                               TextWrapping="Wrap" Margin="0,14,0,0" FontSize="10.5"/>
+                    <Button x:Name="CheckUpdateNowButton" Style="{StaticResource Button.Base}" Margin="0,14,0,0"
+                            Padding="16,8" HorizontalAlignment="Left"
+                            Content="{DynamicResource String.Settings.CheckUpdateNow}" Click="CheckUpdate_OnClick"/>
+                </StackPanel>
+            </Expander>
             <!-- 高级 -->
             <Expander Header="{DynamicResource String.Settings.GroupAdvanced}" Style="{StaticResource SettingsGroup}" Tag="advanced">
                 <StackPanel>
@@ -674,6 +718,7 @@
                     </StackPanel>
                 </StackPanel>
             </Expander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

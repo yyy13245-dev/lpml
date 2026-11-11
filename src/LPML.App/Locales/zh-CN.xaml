@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML zh-CN 语言包 · 简体中文 -->
-    <!-- 词条 1485 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1524 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">准备中…</sys:String>
@@ -18,7 +18,7 @@
     <!-- About -->
     <sys:String x:Key="String.About.Title">关于 LPML</sys:String>
     <sys:String x:Key="String.About.Subtitle">轻量、绿色、可定制的 Minecraft 启动器</sys:String>
-    <sys:String x:Key="String.About.Version">版本 0.0.001 · .NET 10 + WPF</sys:String>
+    <sys:String x:Key="String.About.Version">版本 0.0.002-1 · .NET 10 + WPF</sys:String>
     <sys:String x:Key="String.About.PortableTitle">绿色运行承诺</sys:String>
     <sys:String x:Key="String.About.DataLocation">数据位置</sys:String>
     <sys:String x:Key="String.About.RootDir">根目录</sys:String>
@@ -1480,7 +1480,7 @@
     <sys:String x:Key="String.Cli.CmdMpStatus">联机组件：{0} · 上次房间 {1} · 模式 {2}</sys:String>
     <sys:String x:Key="String.Cli.CmdAgreementReplay">用户协议（版本 {0}）：</sys:String>
     <sys:String x:Key="String.Cli.CmdDisclaimer">完整免责声明：{0}</sys:String>
-    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · 界面语言 {0}&#x0A;第三方、非官方 Minecraft Java 版启动器，与 Mojang / Microsoft 无关联。&#x0A;源代码、界面文案与文档主要由 AI 辅助生成，按「现状」提供，风险自担。&#x0A;协议版本 {1} · 完整免责声明见 DISCLAIMER.md&#x0A;GPL-3.0-or-later · 版权与署名见 NOTICE · 本软件不提供任何担保</sys:String>
+    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.002-1 · 界面语言 {0}&#x0A;第三方、非官方 Minecraft Java 版启动器，与 Mojang / Microsoft 无关联。&#x0A;源代码、界面文案与文档主要由 AI 辅助生成，按「现状」提供，风险自担。&#x0A;协议版本 {1} · 完整免责声明见 DISCLAIMER.md&#x0A;GPL-3.0-or-later · 版权与署名见 NOTICE · 本软件不提供任何担保</sys:String>
     <sys:String x:Key="String.Multi.Copyright">Terracotta | 陶瓦联机 © Burning_TNT 及贡献者 · AGPL-3.0-or-later（含例外条款）；基于 EasyTier。本启动器通过本地 HTTP API 与未经修改的官方程序交互。</sys:String>
     <sys:String x:Key="String.Multi.HmclCompat">邀请码与 HMCL / PCL CE / FCL 使用同一套 U/XXXX-XXXX-XXXX-XXXX 码制，可以直接互连。</sys:String>
     <sys:String x:Key="String.Multi.HmclNotice">能否连通取决于对方启动器的版本与网络环境，本启动器不保证联机成功率。</sys:String>
@@ -1617,4 +1617,51 @@
     <sys:String x:Key="String.Core.Log.Install.JarInspectFailed">读取 {0} 失败：{1}</sys:String>
     <sys:String x:Key="String.Core.Log.Launch.MainClassMissing">启动主类 {0} 不在 classpath 中（共 {1} 个 jar，示例：{2}），已中止启动</sys:String>
     <sys:String x:Key="String.Core.Err.Launch.MainClassMissing">加载器文件不完整：找不到启动主类 {0}。请在实例里点「补全游戏文件」，或到下载中心重装该加载器版本</sys:String>
+
+    <!-- 在线更新 -->
+    <sys:String x:Key="String.Nav.Update">在线更新</sys:String>
+    <sys:String x:Key="String.Settings.GroupUpdate">在线更新</sys:String>
+    <sys:String x:Key="String.Settings.UpdateEnable">启用在线更新</sys:String>
+    <sys:String x:Key="String.Settings.UpdateMuteOptional">自动检查时屏蔽可选更新</sys:String>
+    <sys:String x:Key="String.Settings.UpdateMuteOptionalHint">仅影响启动时的自动检查；手动检查仍能查看可选更新。</sys:String>
+    <sys:String x:Key="String.Settings.UpdateLineHint">两条线路按顺序尝试；选中的线路优先，另一条作为失败兜底。启动时的自动检查由高级设置里的「启动时检查更新」控制。</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackage">更新包类型</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackageAuto">自动（跟随当前安装）</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackageRuntime">带 .NET 运行时（体积较大）</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackageNoRuntime">不带运行时</sys:String>
+    <sys:String x:Key="String.Settings.UpdateRuntimeDetected">检测到当前安装：{0}。自动模式会下载同类型的更新包；手动切换会改变新程序对系统 .NET 的依赖。</sys:String>
+    <sys:String x:Key="String.Settings.UpdateHint">清单与更新包均通过 HTTPS 获取；清单须通过 Ed25519 验签，更新包须通过 SHA-256 校验。应用更新时启动器会重启，游戏目录与账户数据不会改动。</sys:String>
+    <sys:String x:Key="String.Settings.CheckUpdateNow">立即检查更新</sys:String>
+    <sys:String x:Key="String.Settings.UpdateSignature">签名文件名</sys:String>
+    <sys:String x:Key="String.Settings.UpdateSignatureHint">留空时自动探测 update.json.sig 等常见命名；发布端使用其他文件名时在这里填写。</sys:String>
+    <sys:String x:Key="String.Msg.Settings.UpdateStatus">当前更新序号：{0} · 已应用版本：{1}</sys:String>
+
+    <sys:String x:Key="String.Update.VerifyHint">更新清单经 Ed25519 验签，更新包经 SHA-256 校验；应用更新时启动器会自动重启。</sys:String>
+    <sys:String x:Key="String.Update.LineLabel">下载线路</sys:String>
+    <sys:String x:Key="String.Update.LineAuto">自动（按清单顺序）</sys:String>
+    <sys:String x:Key="String.Update.LineDirect">GitHub 直连优先</sys:String>
+    <sys:String x:Key="String.Update.LineProxy">代理线路优先</sys:String>
+    <sys:String x:Key="String.Update.PackageLabel">更新包类型</sys:String>
+    <sys:String x:Key="String.Update.PackageAuto">自动（跟随当前安装）</sys:String>
+    <sys:String x:Key="String.Update.RuntimeWith">带 .NET 运行时</sys:String>
+    <sys:String x:Key="String.Update.RuntimeWithout">不带 .NET 运行时</sys:String>
+    <sys:String x:Key="String.Update.RuntimeInfo">当前安装：{0} · 本次将下载：{1} 的更新包</sys:String>
+    <sys:String x:Key="String.Update.MandatoryHint">此更新为必须更新，完成更新前不能关闭本窗口。</sys:String>
+    <sys:String x:Key="String.Update.ReleasePage">打开发布页</sys:String>
+    <sys:String x:Key="String.Update.Later">稍后提醒</sys:String>
+    <sys:String x:Key="String.Update.UpdateNow">立即更新</sys:String>
+    <sys:String x:Key="String.Update.Meta">版本 {0} · 更新序号 {1}</sys:String>
+    <sys:String x:Key="String.Update.LevelRequired">必须更新</sys:String>
+    <sys:String x:Key="String.Update.LevelImportant">重要更新</sys:String>
+    <sys:String x:Key="String.Update.LevelOptional">可选更新</sys:String>
+    <sys:String x:Key="String.Update.IntroEmpty">本次更新未提供详细说明。</sys:String>
+    <sys:String x:Key="String.Update.Hint">选择下载线路与更新包类型后点击「立即更新」，启动器会自动下载、校验并重启。</sys:String>
+    <sys:String x:Key="String.Update.Downloading">正在下载更新包…</sys:String>
+    <sys:String x:Key="String.Update.Applying">更新包已校验，正在准备重启…</sys:String>
+    <sys:String x:Key="String.Update.Ready">更新已就绪，启动器即将重启。</sys:String>
+    <sys:String x:Key="String.Update.Progress">已下载 {0} / {1}</sys:String>
+    <sys:String x:Key="String.Update.ApplyFailed">更新失败：{0}</sys:String>
+    <sys:String x:Key="String.Update.NoUpdate">当前已是最新版本。</sys:String>
+    <sys:String x:Key="String.Update.DisabledHint">在线更新已在设置里关闭。</sys:String>
+    <sys:String x:Key="String.Update.CheckFailed">检查更新失败：{0}</sys:String>
 </ResourceDictionary>

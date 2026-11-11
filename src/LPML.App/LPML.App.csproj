@@ -13,7 +13,7 @@
     <RootNamespace>LPML.App</RootNamespace>
     <AssemblyName>LPML</AssemblyName>
     <Product>LPML Launcher</Product>
-    <Version>0.0.001</Version>
+    <Version>0.0.002-1</Version>
     <ApplicationIcon>Assets\lpml.ico</ApplicationIcon>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>

@@ -77,7 +77,7 @@ public sealed class HttpService
             };
             _client.DefaultRequestHeaders.UserAgent.Clear();
             _client.DefaultRequestHeaders.UserAgent.ParseAdd(string.IsNullOrWhiteSpace(settings.UserAgent)
-                ? "LPML/0.0.001"
+                ? "LPML/" + LPML.Core.BuildInfo.Version
                 : settings.UserAgent);
             _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
             _client.DefaultRequestHeaders.ConnectionClose = false;
@@ -166,6 +166,19 @@ public sealed class HttpService
 
     public async Task<byte[]> GetBytesAsync(string url, CancellationToken token = default)
         => await RetryAsync(async ct => await Client.GetByteArrayAsync(url, ct).ConfigureAwait(false), url, token);
+
+    /// <summary>
+    /// 可选资源（如更新签名文件）的探测：失败立即返回 null，不走重试退避。
+    /// 逐个探测多个候选文件名时，用 GetBytesAsync 会被 404 的退避拖慢好几秒。
+    /// </summary>
+    public async Task<byte[]?> TryGetBytesAsync(string url, CancellationToken token = default)
+    {
+        try { return await Client.GetByteArrayAsync(url, token).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (HttpRequestException) { return null; }
+        catch (TaskCanceledException) { return null; }
+        catch (IOException) { return null; }
+    }
 
     public async Task DownloadToFileAsync(string url, string destination,
         IProgress<(long Received, long Total)>? progress = null, CancellationToken token = default,

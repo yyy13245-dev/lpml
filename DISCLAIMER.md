@@ -42,6 +42,8 @@ LPML（Let's Play Minecraft Launcher）是**第三方、非官方**的 Minecraft
 
 本软件可能向官方服务、镜像站、Modrinth 等第三方发起请求，并按用户选择下载第三方提供的文件。维护者**不控制、不审查、不担保**这些服务与文件，也不对其可用性、内容、准确性、合法性、安全性或持续性负责。第三方服务可能随时变更、限流、停止服务或修改条款；由此造成的一切影响由用户自行承担。
 
+**在线更新**：启用时启动器会主动访问 `https://lpml.pages.dev/api/v1/lpml/` 拉取更新清单与签名，并在你确认后下载整包、替换程序目录下的文件并重启启动器。清单须通过 Ed25519 验签、整包须通过 SHA-256 校验；这些校验只保证文件在传输中未被篡改，**不构成对更新内容无缺陷、无恶意代码或适合你环境的担保**，更新包仍可能带来新的缺陷、兼容性问题或数据风险，请在更新前自行备份。在线更新可在「设置 → 在线更新」中关闭；关闭后或更换为自建端点后程序照常运行，验签不用于限制修改版的运行。维护者不为修改版提供更新、支持或分发。
+
 用户应自行遵守 Minecraft 最终用户许可协议（EULA）、各第三方服务条款、所下载内容各自的许可证，以及所在地法律法规。不得将本软件用于侵犯他人知识产权、规避付费、共享或交易账户、攻击或干扰第三方服务等用途。
 
 ### 5. 账户与本地数据
@@ -110,6 +112,8 @@ By using this software you understand and accept that **you bear all risks and c
 
 
 The software may contact official services, mirrors, Modrinth and other third parties, and downloads files chosen by the user. The maintainers **do not control, review or warrant** those services or files, nor their availability, content, accuracy, legality, security or continuity. Third-party services may change, rate-limit, shut down or amend their terms at any time; all resulting effects are borne by the user.
+
+**Online updates**: when enabled, the launcher contacts `https://lpml.pages.dev/api/v1/lpml/` for a manifest and signature and, after your confirmation, downloads a package that replaces files in the program directory and restarts the launcher. The manifest must pass Ed25519 verification and the package must match its SHA-256; these checks only show that the files were not altered in transit and **are not a warranty that the update is defect-free, free of malicious code or suitable for your environment**. An update may still introduce new defects, compatibility problems or data risks — back up before updating. Online updates can be switched off under Settings → Online Update; turning them off or pointing at your own endpoint does not stop the program from running. Signature verification is not used to restrict modified builds, and the maintainers provide no updates, support or distribution for modified versions.
 
 You are responsible for complying with the Minecraft EULA, the terms of each third-party service, the licences of everything you download, and the laws of your jurisdiction. This software must not be used to infringe intellectual property, bypass payment, share or trade accounts, or attack or disrupt third-party services.
 

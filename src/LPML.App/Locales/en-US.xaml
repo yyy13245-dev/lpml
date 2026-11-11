@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- LPML en-US 语言包 · English -->
-    <!-- 词条 1485 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
+    <!-- 词条 1524 条；键名 String.<模块>.<项>，XAML 侧用 {DynamicResource ...} 引用 -->
 
     <!-- Progress -->
     <sys:String x:Key="String.Progress.Summary">Preparing…</sys:String>
@@ -18,7 +18,7 @@
     <!-- About -->
     <sys:String x:Key="String.About.Title">About LPML</sys:String>
     <sys:String x:Key="String.About.Subtitle">A lightweight, portable and customizable Minecraft launcher</sys:String>
-    <sys:String x:Key="String.About.Version">Version 0.0.001 · .NET 10 + WPF</sys:String>
+    <sys:String x:Key="String.About.Version">Version 0.0.002-1 · .NET 10 + WPF</sys:String>
     <sys:String x:Key="String.About.PortableTitle">Portability promise</sys:String>
     <sys:String x:Key="String.About.DataLocation">Data locations</sys:String>
     <sys:String x:Key="String.About.RootDir">Root directory</sys:String>
@@ -1480,7 +1480,7 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Cli.CmdMpStatus">Multiplayer core: {0} · last room {1} · mode {2}</sys:String>
     <sys:String x:Key="String.Cli.CmdAgreementReplay">User agreement (version {0}):</sys:String>
     <sys:String x:Key="String.Cli.CmdDisclaimer">Full disclaimer: {0}</sys:String>
-    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.001 · language {0}&#x0A;A third-party, unofficial Minecraft Java Edition launcher, not affiliated with Mojang or Microsoft.&#x0A;Source, UI text and docs are mostly AI-assisted, provided "as is"; use at your own risk.&#x0A;Agreement version {1} · full disclaimer in DISCLAIMER.md&#x0A;GPL-3.0-or-later · copyright &amp; attribution in NOTICE · provided with ABSOLUTELY NO WARRANTY</sys:String>
+    <sys:String x:Key="String.Cli.CmdAbout">LPML 0.0.002-1 · language {0}&#x0A;A third-party, unofficial Minecraft Java Edition launcher, not affiliated with Mojang or Microsoft.&#x0A;Source, UI text and docs are mostly AI-assisted, provided "as is"; use at your own risk.&#x0A;Agreement version {1} · full disclaimer in DISCLAIMER.md&#x0A;GPL-3.0-or-later · copyright &amp; attribution in NOTICE · provided with ABSOLUTELY NO WARRANTY</sys:String>
     <sys:String x:Key="String.Multi.Copyright">Terracotta © Burning_TNT and contributors · AGPL-3.0-or-later (with exception); built on EasyTier. LPML talks to the unmodified official binary over its local HTTP API.</sys:String>
     <sys:String x:Key="String.Multi.HmclCompat">Invitation codes use the same U/XXXX-XXXX-XXXX-XXXX format as HMCL / PCL CE / FCL, so they can join each other directly.</sys:String>
     <sys:String x:Key="String.Multi.HmclNotice">Connectivity depends on the other launcher's version and network conditions; a successful connection is not guaranteed.</sys:String>
@@ -1617,4 +1617,51 @@ See LPML\logs\lpml.log</sys:String>
     <sys:String x:Key="String.Core.Log.Install.JarInspectFailed">Could not read {0}: {1}</sys:String>
     <sys:String x:Key="String.Core.Log.Launch.MainClassMissing">Main class {0} is not on the classpath ({1} jars, e.g. {2}); launch aborted</sys:String>
     <sys:String x:Key="String.Core.Err.Launch.MainClassMissing">Loader files are incomplete: main class {0} not found. Use 'Complete game files' on the instance, or reinstall this loader version from the download center</sys:String>
+
+    <!-- Online update -->
+    <sys:String x:Key="String.Nav.Update">Updates</sys:String>
+    <sys:String x:Key="String.Settings.GroupUpdate">Online Update</sys:String>
+    <sys:String x:Key="String.Settings.UpdateEnable">Enable online updates</sys:String>
+    <sys:String x:Key="String.Settings.UpdateMuteOptional">Hide optional updates on automatic checks</sys:String>
+    <sys:String x:Key="String.Settings.UpdateMuteOptionalHint">Applies to the startup check only; a manual check still shows optional updates.</sys:String>
+    <sys:String x:Key="String.Settings.UpdateLineHint">Both routes are tried in order; the selected one goes first and the other stays as a fallback. The startup check is controlled by 'Check for updates on startup' in Advanced.</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackage">Update package</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackageAuto">Automatic (match current install)</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackageRuntime">With .NET runtime (larger)</sys:String>
+    <sys:String x:Key="String.Settings.UpdatePackageNoRuntime">Without runtime</sys:String>
+    <sys:String x:Key="String.Settings.UpdateRuntimeDetected">Current install: {0}. Automatic mode downloads the matching package; choosing manually changes the new build's dependency on a system-wide .NET runtime.</sys:String>
+    <sys:String x:Key="String.Settings.UpdateHint">The manifest and packages are fetched over HTTPS; the manifest must pass Ed25519 verification and the package must match its SHA-256. Applying an update restarts the launcher; game folders and accounts are untouched.</sys:String>
+    <sys:String x:Key="String.Settings.CheckUpdateNow">Check for updates now</sys:String>
+    <sys:String x:Key="String.Settings.UpdateSignature">Signature file name</sys:String>
+    <sys:String x:Key="String.Settings.UpdateSignatureHint">Leave blank to probe common names such as update.json.sig; fill in the exact name if your endpoint uses another one.</sys:String>
+    <sys:String x:Key="String.Msg.Settings.UpdateStatus">Current update number: {0} · Applied version: {1}</sys:String>
+
+    <sys:String x:Key="String.Update.VerifyHint">The manifest is Ed25519-verified and the package is SHA-256 checked; the launcher restarts automatically when the update is applied.</sys:String>
+    <sys:String x:Key="String.Update.LineLabel">Download route</sys:String>
+    <sys:String x:Key="String.Update.LineAuto">Automatic (manifest order)</sys:String>
+    <sys:String x:Key="String.Update.LineDirect">GitHub direct first</sys:String>
+    <sys:String x:Key="String.Update.LineProxy">Proxy route first</sys:String>
+    <sys:String x:Key="String.Update.PackageLabel">Update package</sys:String>
+    <sys:String x:Key="String.Update.PackageAuto">Automatic (match current install)</sys:String>
+    <sys:String x:Key="String.Update.RuntimeWith">With .NET runtime</sys:String>
+    <sys:String x:Key="String.Update.RuntimeWithout">Without .NET runtime</sys:String>
+    <sys:String x:Key="String.Update.RuntimeInfo">Current install: {0} · This update will download: {1}</sys:String>
+    <sys:String x:Key="String.Update.MandatoryHint">This update is required; this window cannot be closed until it is applied.</sys:String>
+    <sys:String x:Key="String.Update.ReleasePage">Open release page</sys:String>
+    <sys:String x:Key="String.Update.Later">Remind me later</sys:String>
+    <sys:String x:Key="String.Update.UpdateNow">Update now</sys:String>
+    <sys:String x:Key="String.Update.Meta">Version {0} · Update number {1}</sys:String>
+    <sys:String x:Key="String.Update.LevelRequired">Required</sys:String>
+    <sys:String x:Key="String.Update.LevelImportant">Important</sys:String>
+    <sys:String x:Key="String.Update.LevelOptional">Optional</sys:String>
+    <sys:String x:Key="String.Update.IntroEmpty">No release notes were provided for this update.</sys:String>
+    <sys:String x:Key="String.Update.Hint">Pick a download route and update package, then click 'Update now'; the launcher downloads, verifies and restarts automatically.</sys:String>
+    <sys:String x:Key="String.Update.Downloading">Downloading the update package…</sys:String>
+    <sys:String x:Key="String.Update.Applying">Package verified, preparing to restart…</sys:String>
+    <sys:String x:Key="String.Update.Ready">The update is ready; the launcher is about to restart.</sys:String>
+    <sys:String x:Key="String.Update.Progress">Downloaded {0} / {1}</sys:String>
+    <sys:String x:Key="String.Update.ApplyFailed">Update failed: {0}</sys:String>
+    <sys:String x:Key="String.Update.NoUpdate">You are already on the latest version.</sys:String>
+    <sys:String x:Key="String.Update.DisabledHint">Online updates are turned off in settings.</sys:String>
+    <sys:String x:Key="String.Update.CheckFailed">Could not check for updates: {0}</sys:String>
 </ResourceDictionary>
